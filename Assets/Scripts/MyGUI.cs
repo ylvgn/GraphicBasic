@@ -11,11 +11,12 @@ public class MyGUI : MonoBehaviour
     {
         Rect,
         RectOutLine,
-        RectOutLineAndRect,
+        RectAndOutLine,
         Line,
         Line_no_float,
         Circle,
         CircleOutLine,
+        CircleAndOutline,
         Triangle,
         TriangleOutLine,
     }
@@ -54,27 +55,37 @@ public class MyGUI : MonoBehaviour
             case Task.RectOutLine:
                 DrawRectOutLine(tex, 30, 60, 256, 256, new Color(1, 1, 1, 1));
                 break;
-            case Task.RectOutLineAndRect:
+            case Task.RectAndOutLine:
                 DrawRect(tex, 30, 60, 256, 256, new Color(0, 1, 0, 1));
                 DrawRectOutLine(tex, 30, 60, 256, 256, new Color(1, 1, 1, 1));
                 break;
             case Task.Line:
-                DrawLine(tex, 10, 50, 10, 320, new Color(0, 1, 1, 1));  // k 不存在
-                DrawLine(tex, 10, 20, 200, 20, new Color(0, 1, 0, 1));  // k == 0
-                DrawLine(tex, 30, 30, 350, 100, new Color(1, 1, 0, 1)); // k > 0
-                DrawLine(tex, 30, 400, 300, 60, new Color(1, 1, 1, 1)); // k < 0
+                DrawLine(tex, 340, 50, 340, 500, new Color(0, 1, 1, 1)); // k 不存在
+                DrawLine(tex, 10, 270, 420, 270, new Color(0, 1, 0, 1));   // k == 0
+                DrawLine(tex, 30, 30, 350, 100, new Color(1, 1, 0, 1));  // 0 < k < 1
+                DrawLine(tex, 30, 30, 60, 300, new Color(0, 0, 1, 1));   // k > 1
+                DrawLine(tex, 30, 400, 60, 60, new Color(1, 1, 1, 1));   // k < -1
+                DrawLine(tex, 30, 400, 400, 350, new Color(1, 0, 1, 1)); // -1 < k < 0
                 break;
             case Task.Line_no_float:
-                DrawLineNF(tex, 30, 400, 300, 60, new Color(1, 1, 1, 1)); // k < 0
+                //DrawLineNF(tex, 30, 400, 300, 60, new Color(1, 1, 1, 1)); // k < 0
                 break;
             case Task.Circle:
+                DrawCircle(tex, 256, 256, 100, new Color(0, 1, 0, 1));
+                DrawCircle(tex, 400, 400, 100, new Color(0, 0, 1, 1));
                 break;
             case Task.CircleOutLine:
+                DrawCircleOutline(tex, 256, 256, 100, new Color(1, 1, 1, 1));
+                break;
+            case Task.CircleAndOutline:
+                DrawCircle(tex, 220, 200, 100, new Color(0, 1, 0, 1));
+                DrawCircleOutline(tex, 220, 200, 100, new Color(1, 1, 1, 1));
                 break;
             case Task.Triangle:
                 break;
             case Task.TriangleOutLine:
-                DrawTriangle(tex, 10, 10, 150, 150, 200, 10, new Color(0, 1, 0, 1));
+                DrawTriangleOutline(tex, 10, 10, 150, 150, 200, 10, new Color(0, 1, 0, 1));
+                DrawTriangleOutline(tex, 10, 200, 10, 150, 200, 200, new Color(0, 1, 1, 1));
                 break;
             default:
                 break;
@@ -83,12 +94,51 @@ public class MyGUI : MonoBehaviour
         tex.Apply(false);
     }
 
-    private void DrawTriangle(Texture2D tex, int x1, int y1, int x2, int y2, int x3, int y3, Color color)
+    private void DrawCircleOutline(Texture2D tex, int x, int y, float r, Color color)
     {
-        // TODO 可能是无效的三角形
+        var a = MyUtility.RoundToInt(r);
+        for (int i = x - a; i <= x + a; i ++)
+            for (int j = y - a; j <= y + a; j ++)
+            {
+                if (i < 0 || y < 0 || x >= tex.width || y >= tex.height) continue;
+                var vec2 = MyUtility.MakeVector(i, j, x, y);
+                float d = MyUtility.Length(vec2);
+                if (Mathf.Abs(d - r) <= 0.55) // ！！！
+                    tex.SetPixel(i, j, color);
+            }
+    }
+
+    private void DrawCircle(Texture2D tex, int x, int y, float r, Color color)
+    {
+        var a = MyUtility.RoundToInt(r);
+        for (int i = x - a; i <= x + a; i ++)
+            for (int j = y - a; j <= y + a; j ++)
+            {
+                if (i < 0 || y < 0 || x >= tex.width || y >= tex.height) continue;
+                float d = (i - x) * (i - x) + (j - y) * (j - y);
+                if (d <= r * r)
+                    tex.SetPixel(i, j, color);
+            }
+    }
+
+    private void DrawTriangleOutline(Texture2D tex, int x1, int y1, int x2, int y2, int x3, int y3, Color color)
+    {
+        // 可能是无效的三角形
+        Vector2 a = MyUtility.MakeVector(x1, y1, x2, y2);
+        Vector2 b = MyUtility.MakeVector(x1, y1, x3, y3);
+        Vector2 c = MyUtility.MakeVector(x2, y2, x3, y3);
+        float len_a = MyUtility.Length(a);
+        float len_b = MyUtility.Length(b);
+        float len_c = MyUtility.Length(c);
+        if ((len_a + len_b < len_c) || (len_a + len_c < len_b) || (len_b + len_c < len_a))
+        {
+            Debug.LogError($"无效三角形:({x1}, {y1}), ({x2}, {y2}),({x3}, {y3})");
+            return;
+        }
+
         DrawLine(tex, x1, y1, x2, y2, color);
-        DrawLine(tex, x1, y1, x3, y3, new Color(1,1,1,1));
-        DrawLine(tex, x2, y2, x3, y3, new Color(1, 0, 1, 1));
+        DrawLine(tex, x1, y1, x3, y3, color);
+        DrawLine(tex, x2, y2, x3, y3, color);
     }
 
     private void DrawRectOutLine(Texture2D tex, int x, int y, int w, int h, Color color)
@@ -143,11 +193,23 @@ public class MyGUI : MonoBehaviour
             return;
         }
 
-        // y - y0 = k * (x - x0)
-        for (int x = x1; x <= x2; x ++)
+        if (Mathf.Abs(k) < 1)
         {
-            int y = MyUtility.RoundToInt(k * (x - x1) + y1);
-            tex.SetPixel(x, y, color);
+            // y = k * (x - x0) + y0
+            for (int x = Mathf.Min(x1, x2); x <= Mathf.Max(x1, x2); x ++)
+            {
+                int y = MyUtility.RoundToInt(k * (x - x1) + y1);
+                tex.SetPixel(x, y, color);
+            }
+        }
+        else
+        {
+            // x = (y - y0) / k + x0
+            for (int y = Mathf.Min(y1, y2); y <= Mathf.Max(y1, y2); y ++)
+            {
+                int x = MyUtility.RoundToInt((y - y1) / k + x1);
+                tex.SetPixel(x, y, color);
+            }
         }
     }
 
