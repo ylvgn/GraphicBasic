@@ -76,10 +76,16 @@ public class MyGUI : MonoBehaviour
                 break;
             case Task.CircleOutLine:
                 DrawCircleOutline(tex, 256, 256, 100, new Color(1, 1, 1, 1));
+                DrawCircleOutline(tex, 400, 400, 100, new Color(0, 0, 1, 1));
                 break;
             case Task.CircleAndOutline:
+                // cirlr1
                 DrawCircle(tex, 220, 200, 100, new Color(0, 1, 0, 1));
                 DrawCircleOutline(tex, 220, 200, 100, new Color(1, 1, 1, 1));
+
+                // circle2
+                DrawCircle(tex, 400, 400, 100, new Color(0, 0, 1, 1));
+                DrawCircleOutline(tex, 400, 400, 100, new Color(1, 1, 1, 1));
                 break;
             case Task.Triangle:
                 break;
@@ -96,6 +102,7 @@ public class MyGUI : MonoBehaviour
 
     private void DrawCircleOutline(Texture2D tex, int x, int y, float r, Color color)
     {
+        /* Solution1
         var a = MyUtility.RoundToInt(r);
         for (int i = x - a; i <= x + a; i ++)
             for (int j = y - a; j <= y + a; j ++)
@@ -106,15 +113,34 @@ public class MyGUI : MonoBehaviour
                 if (Mathf.Abs(d - r) <= 0.55) // ！！！
                     tex.SetPixel(i, j, color);
             }
+        */
+
+        // Solution2
+        // (y - y0)² = r² - (x - x0)²
+        var a = MyUtility.RoundToInt(r);
+        for (int i = x - a; i <= x + a; i++)
+        {
+            float y_y0 = Mathf.Sqrt(r * r - (i - x) * (i - x));
+            if (i < 0 || i >= tex.width ) continue;
+
+            // 上半圆
+            int j = MyUtility.RoundToInt(-(y_y0 - y));
+            if (j > 0 && j < tex.height) tex.SetPixel(i, j, color);
+
+            // 下半圆
+            j = MyUtility.RoundToInt(y_y0 + y);
+            if (j > 0 && j < tex.height) tex.SetPixel(i, j, color);
+        }
     }
 
     private void DrawCircle(Texture2D tex, int x, int y, float r, Color color)
     {
+        // (x - x0)² + (y - y0)² ≤ r²
         var a = MyUtility.RoundToInt(r);
         for (int i = x - a; i <= x + a; i ++)
             for (int j = y - a; j <= y + a; j ++)
             {
-                if (i < 0 || y < 0 || x >= tex.width || y >= tex.height) continue;
+                if (i < 0 || j < 0 || i >= tex.width || j >= tex.height) continue;
                 float d = (i - x) * (i - x) + (j - y) * (j - y);
                 if (d <= r * r)
                     tex.SetPixel(i, j, color);
