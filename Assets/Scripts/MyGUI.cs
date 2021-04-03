@@ -19,6 +19,7 @@ public class MyGUI : MonoBehaviour
         CircleAndOutline,
         Triangle,
         TriangleOutLine,
+        TriangleAndOutLine,
     }
 
     Texture2D tex;
@@ -61,14 +62,13 @@ public class MyGUI : MonoBehaviour
                 break;
             case Task.Line:
                 DrawLine(tex, 340, 50, 340, 500, new Color(0, 1, 1, 1)); // k 不存在
-                DrawLine(tex, 10, 270, 420, 270, new Color(0, 1, 0, 1));   // k == 0
+                DrawLine(tex, 10, 270, 420, 270, new Color(0, 1, 0, 1)); // k == 0
                 DrawLine(tex, 30, 30, 350, 100, new Color(1, 1, 0, 1));  // 0 < k < 1
                 DrawLine(tex, 30, 30, 60, 300, new Color(0, 0, 1, 1));   // k > 1
                 DrawLine(tex, 30, 400, 60, 60, new Color(1, 1, 1, 1));   // k < -1
                 DrawLine(tex, 30, 400, 400, 350, new Color(1, 0, 1, 1)); // -1 < k < 0
                 break;
             case Task.Line_no_float:
-                //DrawLineNF(tex, 30, 400, 300, 60, new Color(1, 1, 1, 1)); // k < 0
                 break;
             case Task.Circle:
                 DrawCircle(tex, 256, 256, 100, new Color(0, 1, 0, 1));
@@ -88,16 +88,112 @@ public class MyGUI : MonoBehaviour
                 DrawCircleOutline(tex, 400, 400, 100, new Color(1, 1, 1, 1));
                 break;
             case Task.Triangle:
+                DrawTriangle(tex, 10, 10, 150, 150, 200, 40, new Color(1, 1, 0, 1));    // 锐角
+                DrawTriangle(tex, 200, 140, 140, 140, 140, 100, new Color(1, 0, 1, 1)); // 直角1
+                DrawTriangle(tex, 300, 300, 300, 340, 350, 300, new Color(1, 0, 1, 1)); // 直角2
+                DrawTriangle(tex, 250, 250, 290, 250, 290, 320, new Color(1, 0, 1, 1)); // 直角3
+                DrawTriangle(tex, 180, 180, 240, 180, 240, 140, new Color(1, 0, 1, 1)); // 直角4
+                DrawTriangle(tex, 10, 200, 180, 250, 350, 200, new Color(0, 1, 1, 1));  // 钝角1
+                DrawTriangle(tex, 400, 400, 450, 350, 450, 450, new Color(0, 1, 1, 1)); // 钝角2
+                DrawTriangle(tex, 300, 40, 270, 70, 370, 70, new Color(0, 1, 1, 1));    // 钝角3
+                DrawTriangle(tex, 400, 60, 380, 90, 380, 30, new Color(0, 1, 1, 1));    // 钝角4
                 break;
             case Task.TriangleOutLine:
-                DrawTriangleOutline(tex, 10, 10, 150, 150, 200, 10, new Color(0, 1, 0, 1));
-                DrawTriangleOutline(tex, 10, 200, 10, 150, 200, 200, new Color(0, 1, 1, 1));
+                DrawTriangleleOutline(tex, 10, 10, 150, 150, 200, 10, new Color(0, 1, 0, 1));
+                DrawTriangleleOutline(tex, 10, 200, 10, 150, 200, 200, new Color(0, 1, 1, 1));
+                break;
+            case Task.TriangleAndOutLine:
+                // triangle1
+                DrawTriangle(tex, 10, 10, 150, 150, 200, 10, new Color(0, 1, 0, 1));
+                DrawTriangleleOutline(tex, 10, 10, 150, 150, 200, 10, Color.white);
+
+                // triangle2
+                DrawTriangle(tex, 10, 200, 180, 250, 350, 200, new Color(0, 1, 1, 1));
+                DrawTriangleleOutline(tex, 10, 200, 180, 250, 350, 200, Color.white);
                 break;
             default:
                 break;
         }
 
         tex.Apply(false);
+    }
+
+    private void DrawTriangle(Texture2D tex, int x1, int y1, int x2, int y2, int x3, int y3, Color color)
+    {
+        if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 || x3 < 0 || y3 < 0 || x1 >= tex.width || y1 >= tex.height || x2 >= tex.width || x1 >= tex.width || y2 >= tex.height || y3 >= tex.height)
+        {
+            Debug.LogError("[DrawTriangle] args error");
+            return;
+        }
+
+        // 人为规定一个顺序:最靠左边的边为x1,y1 x2.y2 总共有3类： | / \ 
+        if (x2 > x3)
+        {
+            DrawTriangle(tex, x1, y1, x3, y3, x2, y2, color);
+            return;
+        }
+        if (x1 > x2)
+        {
+            DrawTriangle(tex, x2, y2, x1, y1, x3, y3, color);
+            return;
+        }
+        if (x1 == x2 && y1 < y2)
+        {
+            DrawTriangle(tex, x2, y2, x1, y1, x3, y3, color);
+            return;
+        }
+        if (x2 == x3 && y2 > y3)
+        {
+            DrawTriangle(tex, x1, y1, x3, y3, x2, y2, color);
+            return;
+        }
+        //Debug.Log($"({x1},{y1}) ({x2},{y2}) ({x3},{y3})");
+
+        if(y1 == y2 && x2 == x3)
+        {
+            int tmp = x2;
+            x2 = x3;
+            x3 = tmp;
+
+            tmp = y2;
+            y2 = y3;
+            y3 = tmp;
+        }
+
+        int left = Mathf.Min(x1, x2, x3);
+        int right = Mathf.Max(x1, x2, x3);
+        int bottom = Mathf.Min(y1, y2, y3);
+        int top = Mathf.Max(y1, y2, y3);
+
+        // 无效的三角形
+        if (!MyUtility.CheckIsValidTriangle(x1, y1, x2, y2, x3, y3))
+        {
+            Debug.LogError($"无效三角形:({x1}, {y1}), ({x2}, {y2}),({x3}, {y3})");
+            return;
+        }
+
+        for (int x = left; x <= right; x ++)
+            for (int y = bottom; y <= top; y ++)
+            {
+                //tex.SetPixel(x, y, Color.green);
+                bool check1 = x1 == x2 || y1 == y2 || MyUtility.CheckIsOnLineRight(x1, y1, x2, y2, x, y);
+                bool check2 = x2 == x3 || y2 == y3 || MyUtility.CheckIsOnLineLeft(x2, y2, x3, y3, x, y); 
+                bool check3 = x1 == x3 || y1 == y3;
+                if (!check3)
+                {
+                    if (y3 >= y1 && y3 >= y2)
+                        check3 = MyUtility.CheckIsOnLineRight(x1, y1, x3, y3, x, y);
+                    else
+                        check3 = MyUtility.CheckIsOnLineLeft(x1, y1, x3, y3, x, y);
+                }
+                    
+                if (check1 && check2 && check3)
+                    tex.SetPixel(x, y, color);
+            }
+
+        //DrawLine(tex, x1, y1, x2, y2, Color.white);
+        //DrawLine(tex, x2, y2, x3, y3, Color.blue);
+        //DrawLine(tex, x1, y1, x3, y3, Color.red);
     }
 
     private void DrawCircleOutline(Texture2D tex, int x, int y, float r, Color color)
@@ -147,16 +243,16 @@ public class MyGUI : MonoBehaviour
             }
     }
 
-    private void DrawTriangleOutline(Texture2D tex, int x1, int y1, int x2, int y2, int x3, int y3, Color color)
+    private void DrawTriangleleOutline(Texture2D tex, int x1, int y1, int x2, int y2, int x3, int y3, Color color)
     {
-        // 可能是无效的三角形
-        Vector2 a = MyUtility.MakeVector(x1, y1, x2, y2);
-        Vector2 b = MyUtility.MakeVector(x1, y1, x3, y3);
-        Vector2 c = MyUtility.MakeVector(x2, y2, x3, y3);
-        float len_a = MyUtility.Length(a);
-        float len_b = MyUtility.Length(b);
-        float len_c = MyUtility.Length(c);
-        if ((len_a + len_b < len_c) || (len_a + len_c < len_b) || (len_b + len_c < len_a))
+        if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 || x3 < 0 || y3 < 0 || x1 >= tex.width || y1 >= tex.height || x2 >= tex.width || x1 >= tex.width || y2 >= tex.height || y3 >= tex.height)
+        {
+            Debug.LogError("[DrawTriangleleOutline] args error");
+            return;
+        }
+
+        // 无效的三角形
+        if (!MyUtility.CheckIsValidTriangle(x1, y1, x2, y2, x3, y3))
         {
             Debug.LogError($"无效三角形:({x1}, {y1}), ({x2}, {y2}),({x3}, {y3})");
             return;
