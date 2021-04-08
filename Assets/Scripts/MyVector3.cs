@@ -24,10 +24,8 @@ public struct MyVector3
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
-    public static void Swap(ref MyVector3 a, ref MyVector3 b)
+    public override string ToString()
     {
-        MyUtility.Swap(ref a.x, ref b.x);
-        MyUtility.Swap(ref a.y, ref b.y);
-        MyUtility.Swap(ref a.z, ref b.z);
+        return string.Format($"({x}, {y}, {z})");
     }
 }

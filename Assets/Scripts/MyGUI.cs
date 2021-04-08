@@ -9,10 +9,22 @@ public class MyGUI : MonoBehaviour
     static MyGUI instance;
     public const int WIDTH = 512;
     public const int HEIGHT = 512;
+    public enum TaskEnum
+    {
+        ALL,
+        Rect,
+        Line,
+        Circle,
+        Triangle,
+    }
 
+    public TaskEnum taskEnum;
     public DrawRect[] MyDrawRects;
+    public DrawLine[] MyDrawLines;
+
     Texture2D tex;
     private bool isEnable;
+
 
     void Start() {
         tex = new Texture2D(WIDTH, HEIGHT);
@@ -24,8 +36,26 @@ public class MyGUI : MonoBehaviour
         if (!isEnable) return;
         if (!tex) tex = new Texture2D(WIDTH, HEIGHT);
         Clear();
-        
-        MyDrawRect();
+
+        switch (taskEnum)
+        {
+            case TaskEnum.ALL:
+                MyDrawRect();
+                MyDrawLine();
+                break;
+            case TaskEnum.Rect:
+                MyDrawRect();
+                break;
+            case TaskEnum.Line:
+                MyDrawLine();
+                break;
+            case TaskEnum.Circle:
+                break;
+            case TaskEnum.Triangle:
+                break;
+            default:
+                break;
+        }
 
         tex.Apply(false);
     }
@@ -37,6 +67,16 @@ public class MyGUI : MonoBehaviour
         {
             if (!MyDrawRects[i]) continue;
             MyDrawRects[i].MyDraw(tex);
+        }
+    }
+
+    void MyDrawLine()
+    {
+        if (MyDrawLines == null) return;
+        for (int i = 0; i < MyDrawLines.Length; i++)
+        {
+            if (!MyDrawLines[i]) continue;
+            MyDrawLines[i].MyDraw(tex);
         }
     }
 

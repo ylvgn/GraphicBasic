@@ -17,13 +17,13 @@ public struct MyVector2
         return Mathf.Sqrt(Dot(this, this));
     }
 
-    public static float Dot(MyVector2 a, MyVector2 b) {
+    public static float Dot(MyVector2 a, MyVector2 b)
+    {
         return a.x * b.x + a.y * b.y;
     }
 
-    public static void Swap(ref MyVector2 a, ref MyVector2 b)
+    public override string ToString()
     {
-        MyUtility.Swap(ref a.x, ref b.x);
-        MyUtility.Swap(ref a.y, ref b.y);
+        return string.Format($"({x}, {y})");
     }
 }
