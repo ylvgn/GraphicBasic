@@ -22,6 +22,11 @@ public struct MyVector2
         return a.x * b.x + a.y * b.y;
     }
 
+    public static MyVector3 Cross(MyVector2 a, MyVector2 b)
+    {
+        return MyVector3.Cross(a, b);
+    }
+
     public override string ToString()
     {
         return string.Format($"({x}, {y})");

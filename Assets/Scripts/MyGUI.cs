@@ -21,6 +21,8 @@ public class MyGUI : MonoBehaviour
     public TaskEnum taskEnum;
     public DrawRect[] MyDrawRects;
     public DrawLine[] MyDrawLines;
+    public DrawCircle[] MyDrawCircles;
+    public DrawTriangle[] MyDrawTriangles;
 
     Texture2D tex;
     private bool isEnable;
@@ -42,6 +44,8 @@ public class MyGUI : MonoBehaviour
             case TaskEnum.ALL:
                 MyDrawRect();
                 MyDrawLine();
+                MyDrawCircle();
+                MyDrawTriangle();
                 break;
             case TaskEnum.Rect:
                 MyDrawRect();
@@ -50,8 +54,10 @@ public class MyGUI : MonoBehaviour
                 MyDrawLine();
                 break;
             case TaskEnum.Circle:
+                MyDrawCircle();
                 break;
             case TaskEnum.Triangle:
+                MyDrawTriangle();
                 break;
             default:
                 break;
@@ -77,6 +83,26 @@ public class MyGUI : MonoBehaviour
         {
             if (!MyDrawLines[i]) continue;
             MyDrawLines[i].MyDraw(tex);
+        }
+    }
+
+    void MyDrawCircle()
+    {
+        if (MyDrawCircles == null) return;
+        for (int i = 0; i < MyDrawCircles.Length; i++)
+        {
+            if (!MyDrawCircles[i]) continue;
+            MyDrawCircles[i].MyDraw(tex);
+        }
+    }
+
+    void MyDrawTriangle()
+    {
+        if (MyDrawTriangles == null) return;
+        for (int i = 0; i < MyDrawTriangles.Length; i++)
+        {
+            if (!MyDrawTriangles[i]) continue;
+            MyDrawTriangles[i].MyDraw(tex);
         }
     }
 

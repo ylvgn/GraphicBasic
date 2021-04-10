@@ -41,6 +41,16 @@ public class DrawLine : MonoBehaviour
         int x2 = (int)p2.x;
         int y2 = (int)p2.y;
 
+        Draw(tex, x1, y1, x2, y2, color);
+    }
+
+    void MyDrawLine_Bresenham(Texture2D tex)
+    {
+
+    }
+
+    public static void Draw(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    {
         float dx = x2 - x1;
         float dy = y2 - y1;
         if (dx == 0 && dy == 0) return;
@@ -55,7 +65,7 @@ public class DrawLine : MonoBehaviour
             {
                 int x = (int)(m * y + x0); // m = (x - x0) / (y - y0)
                 if (x < 0 || y + y0 < 0 || x >= tex.width || y + y0 >= tex.height) continue;
-                tex.SetPixel(x, y + y0, color);
+                tex.SetPixel(x, y + y0, c);
             }
         }
         else
@@ -68,13 +78,8 @@ public class DrawLine : MonoBehaviour
             {
                 int y = (int)(m * x + y0); // m = (y - y0) / (x - x0)
                 if (x + x0 < 0 || y < 0 || x + x0 >= tex.width || y >= tex.height) continue;
-                tex.SetPixel(x + x0, y, color);
+                tex.SetPixel(x + x0, y, c);
             }
         }
-    }
-
-    void MyDrawLine_Bresenham(Texture2D tex)
-    {
-
     }
 }
