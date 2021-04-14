@@ -40,16 +40,36 @@ public class DrawLine : MonoBehaviour
         int y1 = (int)p1.y;
         int x2 = (int)p2.x;
         int y2 = (int)p2.y;
-
-        Draw(tex, x1, y1, x2, y2, color);
+        DrawNormalLine(tex, x1, y1, x2, y2, color);
     }
 
     void MyDrawLine_Bresenham(Texture2D tex)
     {
-
+        int x1 = (int)p1.x;
+        int y1 = (int)p1.y;
+        int x2 = (int)p2.x;
+        int y2 = (int)p2.y;
+        DrawBresenhamLine(tex, x1, y1, x2, y2, color);
     }
 
-    public static void Draw(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    public static void Draw(Texture2D tex, int x1, int y1, int x2, int y2, Color c, LineType type)
+    {
+        switch (type)
+        {
+            case LineType.Line:
+                DrawNormalLine(tex, x1, y1, x2, y2, c);
+                break;
+            case LineType.Bresenham:
+                DrawBresenhamLine(tex, x1, y1, x2, y2, c);
+                break;
+            case LineType.XiaolinWu:
+                break;
+            default:
+                break;
+        }
+    }
+
+    static void DrawNormalLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
         float dx = x2 - x1;
         float dy = y2 - y1;
@@ -79,6 +99,41 @@ public class DrawLine : MonoBehaviour
                 int y = (int)(m * x + y0); // m = (y - y0) / (x - x0)
                 if (x + x0 < 0 || y < 0 || x + x0 >= tex.width || y >= tex.height) continue;
                 tex.SetPixel(x + x0, y, c);
+            }
+        }
+    }
+
+    static void DrawBresenhamLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    {
+        // 令 x1 < x2 && y1 < y2
+        bool isSteep = Mathf.Abs(y2 - y1) > Mathf.Abs(x2 - x1);
+        if (isSteep)
+        {
+            MyUtility.Swap(ref x1, ref y1);
+            MyUtility.Swap(ref x2, ref y2);
+        }
+
+        if (x1 > x2)
+        {
+            MyUtility.Swap(ref x1, ref x2);
+            MyUtility.Swap(ref y1, ref y2);
+        }
+
+        // 0 < abs(dy) < dx
+        int dy = System.Math.Abs(y2 - y1);
+        int dx = x2 - x1;
+
+        if (dx == 0 && dy == 0) return;
+        int slope_error = dy - dx;
+        int ystep = (y1 < y2) ? 1 : -1;
+        for (int x = x1, y = y1; x <= x2; x++)
+        {
+            tex.SetPixel(isSteep ? y : x, isSteep ? x : y, c);
+            slope_error += dy;
+            if (slope_error >= 0)
+            {
+                y += ystep;
+                slope_error -= dx;
             }
         }
     }

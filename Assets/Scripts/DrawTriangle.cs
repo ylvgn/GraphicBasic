@@ -71,8 +71,8 @@ public class DrawTriangle : MonoBehaviour
         int x1 = (int)p1.x, y1 = (int)p1.y;
         int x2 = (int)p2.x, y2 = (int)p2.y;
         int x3 = (int)p3.x, y3 = (int)p3.y;
-        DrawLine.Draw(tex, x1, y1, x2, y2, outLineColor);
-        DrawLine.Draw(tex, x2, y2, x3, y3, outLineColor);
-        DrawLine.Draw(tex, x3, y3, x1, y1, outLineColor);
+        DrawLine.Draw(tex, x1, y1, x2, y2, outLineColor, DrawLine.LineType.Line);
+        DrawLine.Draw(tex, x2, y2, x3, y3, outLineColor, DrawLine.LineType.Line);
+        DrawLine.Draw(tex, x3, y3, x1, y1, outLineColor, DrawLine.LineType.Line);
     }
 }
