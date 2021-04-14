@@ -28,6 +28,7 @@ public class DrawLine : MonoBehaviour
                 MyDrawLine_Bresenham(tex);
                 break;
             case LineType.XiaolinWu:
+                MyDrawLine_XiaolinWu(tex);
                 break;
             default:
                 break;
@@ -52,6 +53,16 @@ public class DrawLine : MonoBehaviour
         DrawBresenhamLine(tex, x1, y1, x2, y2, color);
     }
 
+
+    void MyDrawLine_XiaolinWu(Texture2D tex)
+    {
+        int x1 = (int)p1.x;
+        int y1 = (int)p1.y;
+        int x2 = (int)p2.x;
+        int y2 = (int)p2.y;
+        DrawXiaolinWuLine(tex, x1, y1, x2, y2, color);
+    }
+
     public static void Draw(Texture2D tex, int x1, int y1, int x2, int y2, Color c, LineType type)
     {
         switch (type)
@@ -63,6 +74,7 @@ public class DrawLine : MonoBehaviour
                 DrawBresenhamLine(tex, x1, y1, x2, y2, c);
                 break;
             case LineType.XiaolinWu:
+                DrawXiaolinWuLine(tex, x1, y1, x2, y2, c);
                 break;
             default:
                 break;
@@ -134,6 +146,44 @@ public class DrawLine : MonoBehaviour
             {
                 y += ystep;
                 slope_error -= dx;
+            }
+        }
+    }
+
+    public static void DrawXiaolinWuLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    {
+        bool isSteep = Mathf.Abs(y2 - y1) > Mathf.Abs(x2 - x1);
+        if (isSteep)
+        {
+            MyUtility.Swap(ref x1, ref y1);
+            MyUtility.Swap(ref x2, ref y2);
+        }
+
+        if (x1 > x2)
+        {
+            MyUtility.Swap(ref x1, ref x2);
+            MyUtility.Swap(ref y1, ref y2);
+        }
+
+        // 0 < abs(dy) < dx
+        int dy = System.Math.Abs(y2 - y1);
+        int dx = x2 - x1;
+
+        int ystep = y1 < y2 ? 1 : -1;
+        int slope_error = dy - dx;
+        float scope = dx + dy;
+        for (int x = x1, y = y1; x <= x2; x ++)
+        {
+            float brightness = (scope + slope_error) / scope;
+            tex.SetPixel(isSteep ? y : x, isSteep ? x : y, c * brightness); // 和 Bresenham line 不同的地方
+            slope_error += dy;
+            if (slope_error >= 0)
+            {
+                y += ystep;
+                slope_error -= dx;
+            } else
+            {
+                tex.SetPixel(isSteep ? y + ystep : x, isSteep ? x : y + ystep, c * (1 - brightness)); // next_ystep
             }
         }
     }
