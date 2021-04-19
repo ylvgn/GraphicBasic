@@ -39,4 +39,13 @@ public static class MyUtility
         else if (value > maxv) value = maxv;
         return value;
     }
+
+    public static void DrawPoint(Texture2D tex, int x, int y, Color c)
+    {
+        tex.SetPixel(x, y, c);
+        tex.SetPixel(x-1, y, c);
+        tex.SetPixel(x+1, y, c);
+        tex.SetPixel(x, y+1, c);
+        tex.SetPixel(x, y-1, c);
+    }
 }
