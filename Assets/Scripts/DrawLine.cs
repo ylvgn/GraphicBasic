@@ -11,7 +11,8 @@ public class DrawLine : MonoBehaviour
     public enum LineType
     {
         Line,
-        Bresenham,
+        Bresenham,  // Bresenham 写法1
+        Bresenham2, // Bresenham 写法2
         XiaolinWu,
     }
 
@@ -26,6 +27,9 @@ public class DrawLine : MonoBehaviour
                 break;
             case LineType.Bresenham:
                 MyDrawLine_Bresenham(tex);
+                break;
+            case LineType.Bresenham2:
+                MyDrawLine_Bresenham2(tex);
                 break;
             case LineType.XiaolinWu:
                 MyDrawLine_XiaolinWu(tex);
@@ -53,6 +57,14 @@ public class DrawLine : MonoBehaviour
         DrawBresenhamLine(tex, x1, y1, x2, y2, color);
     }
 
+    void MyDrawLine_Bresenham2(Texture2D tex)
+    {
+        int x1 = (int)p1.x;
+        int y1 = (int)p1.y;
+        int x2 = (int)p2.x;
+        int y2 = (int)p2.y;
+        DrawBresenhamLine2(tex, x1, y1, x2, y2, color);
+    }
 
     void MyDrawLine_XiaolinWu(Texture2D tex)
     {
@@ -73,6 +85,9 @@ public class DrawLine : MonoBehaviour
             case LineType.Bresenham:
                 DrawBresenhamLine(tex, x1, y1, x2, y2, c);
                 break;
+            case LineType.Bresenham2:
+                DrawBresenhamLine2(tex, x1, y1, x2, y2, c);
+                break;
             case LineType.XiaolinWu:
                 DrawXiaolinWuLine(tex, x1, y1, x2, y2, c);
                 break;
@@ -81,6 +96,7 @@ public class DrawLine : MonoBehaviour
         }
     }
 
+    // https://www.dgp.toronto.edu/~hertzman/418notes.pdf
     static void DrawNormalLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
         float dx = x2 - x1;
@@ -115,6 +131,7 @@ public class DrawLine : MonoBehaviour
         }
     }
 
+    // https://unionassets.com/blog/algorithm-brezenhema-and-wu-s-line-299
     static void DrawBresenhamLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
         // 令 x1 < x2 && y1 < y2
@@ -150,7 +167,66 @@ public class DrawLine : MonoBehaviour
         }
     }
 
-    public static void DrawXiaolinWuLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    // https://csustan.csustan.edu/~tom/Lecture-Notes/Graphics/Bresenham-Line/Bresenham-Line.pdf
+    static void DrawBresenhamLine2(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    {
+        int dy = y2 - y1;
+        int dx = x2 - x1;
+        int xStep = 1, yStep = 1;
+        if (dy < 0)
+        {
+            dy = -dy;
+            yStep = -1;
+        }
+        if (dx < 0)
+        {
+            dx = -dx;
+            xStep = -1;
+        }
+
+        dy <<= 1; // dy = 2▲y
+        dx <<= 1; // dx = 2▲x
+        tex.SetPixel(x1, y1, c);
+
+        // DV(k) = ((Y0 + (k + 1) ∗ m) mod 1) − 0.5f
+        // 将两边乘 slope_error = 2*▲x * DV(k) = ((k ∗ 2∗▲y + 2∗▲y) mod (2*▲x)) − (▲x)
+        int t = 0;
+        if (dx > dy)
+        {
+            int slope_error = dy - (dx >> 1); // 2▲y - ▲x
+            while( x1 != x2 )
+            {
+                t++;
+                x1 += xStep;
+                if (slope_error >= 0) // [-0.5, 0.5] -> [2▲x * -0.5, 2▲x * 0.5]
+                {
+                    y1 += yStep;
+                    slope_error -= dx;
+                }
+                slope_error += dy;
+                tex.SetPixel(x1, y1, c);
+            }
+        } else
+        {
+            int slope_error = dx - (dy >> 1); // 2▲x - ▲y
+            while (y1 != y2)
+            {
+                t++;
+                y1 += yStep;
+                if (slope_error >= 0) // [-0.5, 0.5] -> [2▲y * -0.5, 2▲y * 0.5]
+                {
+                    x1 += xStep;
+                    slope_error -= dy;
+                }
+                slope_error += dx;
+                tex.SetPixel(x1, y1, c);
+            }
+        }
+
+    }
+
+    // https://www.geeksforgeeks.org/anti-aliased-line-xiaolin-wus-algorithm/
+    static void DrawXiaolinWuLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
         bool isSteep = Mathf.Abs(y2 - y1) > Mathf.Abs(x2 - x1);
         if (isSteep)
@@ -183,7 +259,7 @@ public class DrawLine : MonoBehaviour
                 slope_error -= dx;
             } else
             {
-                tex.SetPixel(isSteep ? y + ystep : x, isSteep ? x : y + ystep, c * (1 - brightness)); // next_ystep
+                tex.SetPixel(isSteep ? y + ystep : x, isSteep ? x : y + ystep, c * (1 - brightness)); // next_ystep = y + ystep
             }
         }
     }
