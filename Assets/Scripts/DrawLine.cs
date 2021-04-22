@@ -13,6 +13,7 @@ public class DrawLine : MonoBehaviour
         Line,
         Bresenham,  // Bresenham 写法1
         Bresenham2, // Bresenham 写法2
+        Bresenham3, // Bresenham 写法3
         XiaolinWu,
     }
 
@@ -30,6 +31,10 @@ public class DrawLine : MonoBehaviour
                 break;
             case LineType.Bresenham2:
                 MyDrawLine_Bresenham2(tex);
+                break;
+            case LineType.Bresenham3:
+                MyDrawLine_Bresenham2(tex);
+                MyDrawLine_Bresenham3(tex);
                 break;
             case LineType.XiaolinWu:
                 MyDrawLine_XiaolinWu(tex);
@@ -66,6 +71,15 @@ public class DrawLine : MonoBehaviour
         DrawBresenhamLine2(tex, x1, y1, x2, y2, color);
     }
 
+    void MyDrawLine_Bresenham3(Texture2D tex)
+    {
+        int x1 = (int)p1.x;
+        int y1 = (int)p1.y;
+        int x2 = (int)p2.x;
+        int y2 = (int)p2.y;
+        DrawBresenhamLine3(tex, x1, y1, x2, y2, Color.green);
+    }
+
     void MyDrawLine_XiaolinWu(Texture2D tex)
     {
         int x1 = (int)p1.x;
@@ -87,6 +101,9 @@ public class DrawLine : MonoBehaviour
                 break;
             case LineType.Bresenham2:
                 DrawBresenhamLine2(tex, x1, y1, x2, y2, c);
+                break;
+            case LineType.Bresenham3:
+                DrawBresenhamLine3(tex, x1, y1, x2, y2, c);
                 break;
             case LineType.XiaolinWu:
                 DrawXiaolinWuLine(tex, x1, y1, x2, y2, c);
@@ -170,33 +187,22 @@ public class DrawLine : MonoBehaviour
     // https://csustan.csustan.edu/~tom/Lecture-Notes/Graphics/Bresenham-Line/Bresenham-Line.pdf
     static void DrawBresenhamLine2(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
-        int dy = y2 - y1;
-        int dx = x2 - x1;
-        int xStep = 1, yStep = 1;
-        if (dy < 0)
-        {
-            dy = -dy;
-            yStep = -1;
-        }
-        if (dx < 0)
-        {
-            dx = -dx;
-            xStep = -1;
-        }
+        int xStep = x1 < x2 ? 1 : -1;
+        int yStep = y1 < y2 ? 1 : -1;
+        int dx = System.Math.Abs(x1 - x2);
+        int dy = System.Math.Abs(y1 - y2);
 
         dy <<= 1; // dy = 2▲y
         dx <<= 1; // dx = 2▲x
         tex.SetPixel(x1, y1, c);
 
         // DV(k) = ((Y0 + (k + 1) ∗ m) mod 1) − 0.5f
-        // 将两边乘 slope_error = 2*▲x * DV(k) = ((k ∗ 2∗▲y + 2∗▲y) mod (2*▲x)) − (▲x)
-        int t = 0;
+        // 将两边乘slope的分母: slope_error = 2*▲x * DV(k) = ((k ∗ 2∗▲y + 2∗▲y) mod (2*▲x)) − (▲x)
         if (dx > dy)
         {
             int slope_error = dy - (dx >> 1); // 2▲y - ▲x
             while( x1 != x2 )
             {
-                t++;
                 x1 += xStep;
                 if (slope_error >= 0) // [-0.5, 0.5] -> [2▲x * -0.5, 2▲x * 0.5]
                 {
@@ -211,7 +217,6 @@ public class DrawLine : MonoBehaviour
             int slope_error = dx - (dy >> 1); // 2▲x - ▲y
             while (y1 != y2)
             {
-                t++;
                 y1 += yStep;
                 if (slope_error >= 0) // [-0.5, 0.5] -> [2▲y * -0.5, 2▲y * 0.5]
                 {
@@ -223,6 +228,50 @@ public class DrawLine : MonoBehaviour
             }
         }
 
+    }
+
+    // http://members.chello.at/~easyfilter/Bresenham.pdf
+    static void DrawBresenhamLine3(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
+    {
+        /*
+            f(x, y) = (y-y1)(x2-x1) - (x-x1)(y2-y1), f(x,y)=0就是直线方程
+            令e = f(x,y) = (y-y1)dx - (x-x1)dy
+            e_x, e_y, e_xy ：表示当前点预测下一个点三个方向的误差:
+                e_xy  =  (y+1-y1)dx - (x+1-x1)dy
+                      =  e + dx - dy
+                e_x   =  (y+1-y1)dx - (x-x1)dy
+                      =  e + dx
+                      =  e_xy + dy
+                e_y   =  (y-y1)dx - (x+1-x1)dy
+                      =  e - dy
+                      =  e_xy - dx
+            // 初始e = 0, 可直接画(x1, y1)
+            e_xy = (y1 + 1 - y1)dx - (x1+1-x1)dy = dx - dy 
+         */
+        int xStep = x1 < x2 ? 1 : -1;
+        int yStep = y1 < y2 ? 1 : -1;
+        int dx = System.Math.Abs(x1 - x2);
+        int dy = System.Math.Abs(y1 - y2);
+        int e_xy = dx - dy;
+        int e_xy2; // e_xy2 = 2 * e_xy
+
+        while(true)
+        {
+            tex.SetPixel(x1, y1, c);
+            e_xy2 = e_xy + e_xy;
+            if (e_xy2 + dy >= 0) // e_xy + e_x > 0  -> e_xy + e_xy + dy > 0
+            {
+                if (x1 == x2) break;
+                x1 += xStep;
+                e_xy -= dy;
+            }
+            if (e_xy2 - dx <= 0) // e_xy + e_y < 0 -> e_xy + e_xy - dx < 0
+            {
+                if (y1 == y2) break;
+                y1+=yStep;
+                e_xy += dx;
+            }
+        }
     }
 
     // https://www.geeksforgeeks.org/anti-aliased-line-xiaolin-wus-algorithm/
