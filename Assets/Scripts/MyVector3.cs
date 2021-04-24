@@ -66,6 +66,16 @@ public struct MyVector3
         return v3;
     }
 
+    public static MyVector3 operator *(MyVector3 a, float k)
+    {
+        return new MyVector3(a.x * k, a.y * k, a.z * k);
+    }
+
+    public static MyVector3 operator *(float k, MyVector3 a)
+    {
+        return a * k;
+    }
+
     public override string ToString()
     {
         return string.Format($"({x}, {y}, {z})");

@@ -16,6 +16,7 @@ public class MyGUI : MonoBehaviour
         Line,
         Circle,
         Triangle,
+        BizierCurve,
     }
 
     public TaskEnum taskEnum;
@@ -23,6 +24,7 @@ public class MyGUI : MonoBehaviour
     public DrawLine[] MyDrawLines;
     public DrawCircle[] MyDrawCircles;
     public DrawTriangle[] MyDrawTriangles;
+    public DrawBizierCurve[] MyDrawBizierCurves;
 
     Texture2D tex;
     private bool isEnable;
@@ -46,6 +48,7 @@ public class MyGUI : MonoBehaviour
                 MyDrawLine();
                 MyDrawCircle();
                 MyDrawTriangle();
+                MyDrawBizierCurve();
                 break;
             case TaskEnum.Rect:
                 MyDrawRect();
@@ -58,6 +61,9 @@ public class MyGUI : MonoBehaviour
                 break;
             case TaskEnum.Triangle:
                 MyDrawTriangle();
+                break;
+            case TaskEnum.BizierCurve:
+                MyDrawBizierCurve();
                 break;
             default:
                 break;
@@ -103,6 +109,16 @@ public class MyGUI : MonoBehaviour
         {
             if (!MyDrawTriangles[i]) continue;
             MyDrawTriangles[i].MyDraw(tex);
+        }
+    }
+
+    void MyDrawBizierCurve()
+    {
+        if (MyDrawBizierCurves == null) return;
+        for (int i = 0; i < MyDrawBizierCurves.Length; i++)
+        {
+            if (!MyDrawBizierCurves[i]) continue;
+            MyDrawBizierCurves[i].MyDraw(tex);
         }
     }
 
