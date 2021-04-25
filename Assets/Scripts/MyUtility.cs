@@ -60,7 +60,8 @@ public static class MyUtility
         Vector3 screenPos = view.camera.WorldToScreenPoint(pos);
         GUI.skin.label.fontSize = fontSize;
         Vector2 size = GUI.skin.label.CalcSize(new GUIContent(text));
-        GUI.Label(new Rect(screenPos.x, view.camera.pixelHeight -screenPos.y, size.x, size.y), text);
+        //GUI.Label(new Rect(screenPos.x, view.camera.pixelHeight -screenPos.y, size.x, size.y), text);
+        GUI.Label(new Rect(screenPos.x - 120, view.camera.pixelHeight - screenPos.y - 100, size.x, size.y), text);
         UnityEditor.Handles.EndGUI();
         GUI.color = oldColor;
         GUI.skin.label.fontSize = oldFontSize;
@@ -82,5 +83,27 @@ public static class MyUtility
         UnityEditor.Handles.EndGUI();
         GUI.color = oldColor;
         GUI.skin.label.fontSize = oldFontSize;
+    }
+
+    public static float Clamp(float v, float min, float max)
+    {
+        if (min > max)
+        {
+            Debug.LogError($"clamp min={min} > {max}=max");
+        }
+        if (v < min) return min;
+        if (v > max) return max;
+        return v;
+    }
+
+    public static int ClampInt(int v, int min, int max)
+    {
+        if (min > max)
+        {
+            Debug.LogError($"clamp min={min} > {max}=max");
+        }
+        if (v < min) return min;
+        if (v > max) return max;
+        return v;
     }
 }
