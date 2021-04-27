@@ -74,7 +74,6 @@ public static class MyUtility
         var oldFontSize = GUI.skin.label.fontSize;
         UnityEditor.Handles.BeginGUI();
         GUI.color = c;
-        var view = UnityEditor.SceneView.currentDrawingSceneView;
         GUI.skin.label.fontSize = fontSize;
         Vector2 size = GUI.skin.label.CalcSize(new GUIContent(text));
         printRect.width += size.x;

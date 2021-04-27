@@ -67,12 +67,9 @@ public class LineClosestPoint : MonoBehaviour
     // dot product
     void PointToLineNearestDistance2(Vector3 a, Vector3 b, Vector3 c)
     {
-        var CA = c-a;
-        var AB = (b - a).normalized;
-        var t = Vector3.Dot(CA, AB);
-        t = MyUtility.Clamp(t, 0, (b-a).magnitude);
-        var m = t * AB + a;
-        var distance = Vector3.Distance(c, m);
+        Vector3 m;
+        float distance;
+        GetPointToLineNearestDistance(a, b, c, out m, out distance);
 
         // output
         MyUtility.LogPoint(new Rect(0, 40, 20, 20), $"distance2={distance}", Color.white);
@@ -80,4 +77,16 @@ public class LineClosestPoint : MonoBehaviour
         Gizmos.color = outputLineColor;
         Gizmos.DrawLine(c, m);
     }
+
+    public static void GetPointToLineNearestDistance(Vector3 a, Vector3 b, Vector3 c, out Vector3 res, out float distance)
+    {
+        var CA = c - a;
+        var AB = (b - a).normalized;
+        var t = Vector3.Dot(CA, AB);
+        t = MyUtility.Clamp(t, 0, (b - a).magnitude);
+        var m = t * AB + a;
+        distance = Vector3.Distance(c, m);
+        res = m;
+    }
+    
 }
