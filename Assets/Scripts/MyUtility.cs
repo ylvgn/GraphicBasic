@@ -83,7 +83,6 @@ public static class MyUtility
         GUI.color = oldColor;
         GUI.skin.label.fontSize = oldFontSize;
     }
-
     public static float Clamp(float v, float min, float max)
     {
         if (min > max)
@@ -104,5 +103,28 @@ public static class MyUtility
         if (v < min) return min;
         if (v > max) return max;
         return v;
+    }
+
+    // (同一个平面上)直线ab和直线cd的交点o
+    public static Vector3 LineLineInterSect(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+    {
+        // 原理：cross<a, b> = S平行四边形, https://www.cnblogs.com/xiangtingshen/p/12329951.html
+        // 作CE//AB && CE == AB, 然后SACD:SCDE = ao:ab
+        var cd = d - c;
+        var ab = b - a;
+        var ca = a - c;
+        var Sacd = Vector3.Cross(cd, ca); // Sparallelogram_acd (ad是对角线, cd是底)
+        var Scde = Vector3.Cross(ab, cd); // Sparallelogram_cde (de是对角线, cd是底)
+        var aoOverab = Vector3.Dot(Sacd, Scde) / Vector3.Dot(Scde, Scde); // p1.x/p2.x + p1.y/p2.y + p1.z/p2.z
+        return a + aoOverab * ab;
+
+        /*
+        // 或者作AE//CD, AE==CD, 然后SABE:SABC = co:cd
+        var S_abe = Vector3.Cross(b - a, d - c);
+        var S_abc = Vector3.Cross(c - a, b - a); //ca,bc
+        var coOvercd = Vector3.Dot(S_abc, S_abe) / Vector3.Dot(S_abe, S_abe); // Sacb面积: Scde = co:cd
+        var o = c + (d - c) * coOvercd;
+        return o;
+        */
     }
 }

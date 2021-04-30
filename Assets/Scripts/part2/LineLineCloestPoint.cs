@@ -16,16 +16,6 @@ public class LineLineCloestPoint : MonoBehaviour
         return p + pcDotnl * nl;
     }
 
-    // (同一个平面上)直线ab和直线cd的交点o
-    Vector3 LineLineIntersectPoint(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
-    {
-        var S_cde = Vector3.Cross(a - b, c - d); // 过c点作ab//ce, 得到三角形cde
-        var S_acb = Vector3.Cross(a - c, c - b);
-        var coOvercd = Vector3.Dot(S_acb, S_cde) / Vector3.Dot(S_cde, S_cde); // Sacb面积: Scde = co:cd
-        var o = c + (d - c) * coOvercd;
-        return o;
-    }
-
     void DrawPlane(Vector3 center, Vector3 nl, float size, Color c)
     {
         var oldColor = Gizmos.color;
@@ -58,7 +48,8 @@ public class LineLineCloestPoint : MonoBehaviour
         var d2planeAB = PointProject2Plane(a, nl, d); // d'
 
         // output
-        var o_onAB = LineLineIntersectPoint(a, b, c2planeAB, d2planeAB); // o_onAB是直线c'd'和ab的交点
+        //var o_onAB = LineLineIntersectPoint(a, b, c2planeAB, d2planeAB); // o_onAB是直线c'd'和ab的交点
+        var o_onAB = MyUtility.LineLineInterSect(a, b, c2planeAB, d2planeAB);
         Vector3 o_onCD;
         float outputDistance;
         var resultNearestPoint = "O";
