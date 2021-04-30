@@ -127,4 +127,11 @@ public static class MyUtility
         return o;
         */
     }
+
+    // p投影到平面o (平面normal是nl) 得到p'
+    public static Vector3 PointCast2Plane(Vector3 o, Vector3 nl, Vector3 p)
+    {
+        nl = nl.normalized;
+        return p + Vector3.Dot(o - p, nl) * nl;
+    }
 }
