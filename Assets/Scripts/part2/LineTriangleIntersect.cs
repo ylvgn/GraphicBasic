@@ -6,17 +6,17 @@ public class LineTriangleIntersect : MonoBehaviour
 {
     public GameObject p1, p2, p3, p4, p5;
     public Color InterSectPointColor;
+    private Vector3 nl; // p1,p2,p3的normal
 
-    bool CheckIsSameSide(Vector3 a, Vector3 b, Vector3 c, Vector3 p)
+    bool CheckIsSameSide(Vector3 a, Vector3 b, Vector3 p)
     {
-        var nl = Vector3.Cross(c - a, b - a);
-        var check_nl = Vector3.Cross(p - a, b - a);
+        var check_nl = Vector3.Cross(b - a, p - a);
         return Vector3.Dot(nl, check_nl) > 0;
     }
 
     bool CheckIsInTriangle(Vector3 a, Vector3 b, Vector3 c, Vector3 p)
     {
-        return (CheckIsSameSide(a, b, c, p) && CheckIsSameSide(b, c, a, p) && CheckIsSameSide(c, a, b, p));
+        return (CheckIsSameSide(a, b, p) && CheckIsSameSide(b, c, p) && CheckIsSameSide(c, a, p));
     }
 
     void OnDrawGizmos()
@@ -28,7 +28,7 @@ public class LineTriangleIntersect : MonoBehaviour
         var c = p3.transform.position;
         var d = p4.transform.position;
         var e = p5.transform.position;
-        var nl = Vector3.Cross(b - a, c - a).normalized;
+        nl = Vector3.Cross(b - a, c - a).normalized;
         var o = new Vector3((a.x+b.x+c.x) / 3f, (a.y+b.y+c.y)/3f, (a.z+b.z+c.z) / 3f);
 
         var d_onABC = d + Vector3.Dot((o - d), nl) * nl;
