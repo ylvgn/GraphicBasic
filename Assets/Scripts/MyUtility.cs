@@ -134,4 +134,11 @@ public static class MyUtility
         nl = nl.normalized;
         return p + Vector3.Dot(o - p, nl) * nl;
     }
+
+    public static void MyDestroy(ref Texture2D o)
+    {
+        if (o == null) return;
+        GameObject.Destroy(o);
+        o = null;
+    }
 }
