@@ -83,6 +83,7 @@ public static class MyUtility
         GUI.color = oldColor;
         GUI.skin.label.fontSize = oldFontSize;
     }
+
     public static float Clamp(float v, float min, float max)
     {
         if (min > max)
@@ -140,5 +141,27 @@ public static class MyUtility
         if (o == null) return;
         GameObject.Destroy(o);
         o = null;
+    }
+
+    // http://www.songho.ca/opengl/gl_projectionmatrix.html
+    public static Matrix4x4 GetProjectMatrix(float left, float right, float bottom, float top, float near, float far)
+    {
+        Matrix4x4 m = new Matrix4x4();
+        m[0] = (2 * near) / (right - left);
+        m[5] = (2 * near) / (top - bottom);
+        m[8] = (right + left) / (right - left);
+        m[9] = (top + bottom) / (top - bottom);
+        m[10] = -(far + near) / (far - near);
+        m[11] = -1;
+        m[14] = -(2 * far * near) / (far - near);
+        return m;
+    }
+
+    public static Matrix4x4 GetProjectMatrix(float fov, float aspect, float near, float far)
+    {
+        var tan = Mathf.Tan(fov / 2 * Mathf.Deg2Rad);
+        var h = tan * near;
+        var w = h * aspect;
+        return GetProjectMatrix(-w, w, -h, h, near, far);
     }
 }
