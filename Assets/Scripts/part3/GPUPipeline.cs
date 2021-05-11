@@ -9,7 +9,15 @@ public class GPUPipeline : MonoBehaviour
 
     public Camera MyCamera;
     Texture2D tex;
-    List<MyShaderBase> inputObj; // tmp
+    List<MyShaderBase> inputObj;
+
+    public enum ShadingMode
+    {
+        Shaded,
+        Wireframe,
+    }
+
+    public ShadingMode shadingMode = ShadingMode.Shaded;
 
     void Start()
     {
@@ -44,9 +52,27 @@ public class GPUPipeline : MonoBehaviour
             var meshFilter = obj.GetComponent<MeshFilter>();
             var mesh = meshFilter.mesh;
             var vertices = mesh.vertices;
-            var shaderParams = new ShaderParameters(obj.transform, MyCamera);
+            var triangles = mesh.triangles;
 
-            // tmp
+            if (shadingMode == ShadingMode.Wireframe)
+            {
+                int last_x = 0, last_y = 0;
+                for (int j = 0; j < triangles.Length; j ++)
+                {
+                    var index = triangles[j];
+                    var world_pos = obj.transform.localToWorldMatrix.MultiplyPoint(vertices[index]);
+                    Vector3 screenPos = MyCamera.WorldToScreenPoint(world_pos);
+                    int x = (int)screenPos.x;
+                    int y = (int)screenPos.y;
+                    if (j > 0 && j % 3 != 0)
+                        DrawLine.Draw(tex, last_x, last_y, x, y, Color.white, DrawLine.LineType.Bresenham);
+                    last_x = x;
+                    last_y = y;
+                }
+                continue;
+            }
+
+            var shaderParams = new ShaderParameters(obj.transform, MyCamera);
             for (int j = 0; j < vertices.Length; j ++)
             {
                 var appdata = (ShaderSemantic)System.Activator.CreateInstance(obj.GetCastType);
