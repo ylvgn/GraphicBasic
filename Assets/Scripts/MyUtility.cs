@@ -164,4 +164,54 @@ public static class MyUtility
         var w = h * aspect;
         return GetProjectMatrix(-w, w, -h, h, near, far);
     }
+
+    // http://www.songho.ca/opengl/gl_camera.html
+    public static Matrix4x4 GetViewMatrix(Camera camera)
+    {
+        var m = new Matrix4x4();
+        var transform = camera.transform;
+        var e = transform.position;
+        var f = -transform.forward;
+        var u = transform.up;
+        var l = Vector3.Cross(f, u); // Unity left hand: f->u
+        // Mview = mul(Mrotation, Mtranslate)
+        /*
+        Mrotation     =    [ lx ux fx 0 ]^(-1)
+                           [ ly uy fy 0 ]
+                           [ lz uz fz 0 ]
+                           [ 0  0  0  1 ]
+
+                      =    [ lx ux fx 0 ]^T
+                           [ ly uy fy 0 ]
+                           [ lz uz fz 0 ]
+                           [ 0  0  0  1 ]
+
+                      =    [ lx ly lz 0 ]
+                           [ ux uy uz 0 ]
+                           [ fx fy fz 0 ]
+                           [ 0  0  0  1 ]
+        */
+
+        /*
+        Mtranslate    =    [ 0  0  0 -ex]
+                           [ 0  0  0 -ey]
+                           [ 0  0  0 -ez]
+                           [ 0  0  0  1 ]
+        */
+
+        /*
+        Mview         =    [ lx ly lz (-ex*lx -ey*ly -ez*lz) ]
+                           [ ux uy uz (-ex*ux -ey*uy -ez*uz) ]
+                           [ fx fy fz (-ex*fx -ey*fy -ez*fz) ]
+                           [ 0  0  0            1            ]
+         */
+        m.SetRow(0, l);
+        m.SetRow(1, u);
+        m.SetRow(2, f);
+        m[12] = -e.x * l.x - e.y * l.y - e.z * l.z;
+        m[13] = -e.x * u.x - e.y * u.y - e.z * u.z;
+        m[14] = -e.x * f.x - e.y * f.y - e.z * f.z;
+        m[15] = 1;
+        return m;
+    }
 }
