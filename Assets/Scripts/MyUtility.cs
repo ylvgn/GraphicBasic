@@ -43,10 +43,10 @@ public static class MyUtility
     public static void DrawPoint(Texture2D tex, int x, int y, Color c)
     {
         tex.SetPixel(x, y, c);
-        tex.SetPixel(x-1, y, c);
-        tex.SetPixel(x+1, y, c);
-        tex.SetPixel(x, y+1, c);
-        tex.SetPixel(x, y-1, c);
+        tex.SetPixel(x - 1, y, c);
+        tex.SetPixel(x + 1, y, c);
+        tex.SetPixel(x, y + 1, c);
+        tex.SetPixel(x, y - 1, c);
     }
 
     // world-space
@@ -211,6 +211,78 @@ public static class MyUtility
         m[12] = -e.x * l.x - e.y * l.y - e.z * l.z;
         m[13] = -e.x * u.x - e.y * u.y - e.z * u.z;
         m[14] = -e.x * f.x - e.y * f.y - e.z * f.z;
+        m[15] = 1;
+        return m;
+    }
+
+
+    public static Matrix4x4 GetModelMatrix(Transform transform)
+    {
+        var p = transform.position;
+        var q = transform.rotation;
+        var s = transform.localScale;
+
+        /*
+        Mmodel     =  Mtranslation * Mrotation * Mscale
+        Mscale     =   [ sx 0  0  0  ]
+                       [ 0  sy 0  0  ]
+                       [ 0  0  sz 0  ]
+                       [ 0  0  0  1  ]
+
+        Mtranslate =   [ 1  0  0  px ]
+                       [ 0  1  0  py ]
+                       [ 0  0  1  pz ]
+                       [ 0  0  0  1  ]
+
+        Mrotation  =
+        */
+
+        var Mscale = Matrix4x4.identity;
+        Mscale[0] = s.x;
+        Mscale[5] = s.y;
+        Mscale[10] = s.z;
+        Mscale[15] = 1;
+
+        var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
+        var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
+        var Mrz = GetRotateMatrix(transform.forward, q.eulerAngles.z);
+        var Mrotation = Mrx * Mry * Mrz;
+
+        var Mtranslate = Matrix4x4.identity;
+        Mtranslate.SetColumn(3, new Vector4(p.x, p.y, p.z, 1));
+
+        return Mtranslate * Mrotation * Mscale; // equals to return Matrix4x4.TRS(p, q, s);
+    }
+
+    // Rodrigues's formula: http://www.songho.ca/opengl/gl_rotate.html
+    public static Matrix4x4 GetRotateMatrix(Vector3 axis, float angle)
+    {
+        var m = new Matrix4x4();
+        float c = Mathf.Cos(angle * Mathf.Deg2Rad);
+        float s = Mathf.Sin(angle * Mathf.Deg2Rad);
+        float x = axis.x;
+        float y = axis.y;
+        float z = axis.z;
+        float c1 = 1 - c;
+        float xx = x * x;
+        float yy = y * y;
+        float zz = z * z;
+        float xy = x * y;
+        float xz = x * z;
+        float yz = y * z;
+        float sx = s * x;
+        float sy = s * y;
+        float sz = s * z;
+
+        m[0] = c1 * xx + c;
+        m[1] = c1 * xy + sz;
+        m[2] = c1 * xz - sy;
+        m[4] = c1 * xy - sz;
+        m[5] = c1 * yy + c;
+        m[6] = c1 * yz + sx;
+        m[8] = c1 * xz + sy;
+        m[9] = c1 * yz - sx;
+        m[10] = c1 * zz + c;
         m[15] = 1;
         return m;
     }
