@@ -246,7 +246,7 @@ public static class MyUtility
         var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
         var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
         var Mrz = GetRotateMatrix(transform.forward, q.eulerAngles.z);
-        var Mrotation = Mrx * Mry * Mrz;
+        var Mrotation = Mrz * Mry * Mrx; // order: 以world space zyx 等价于 locals pace xyz
 
         var Mtranslate = Matrix4x4.identity;
         Mtranslate.SetColumn(3, new Vector4(p.x, p.y, p.z, 1));
