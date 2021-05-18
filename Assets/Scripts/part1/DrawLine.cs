@@ -151,7 +151,7 @@ public class DrawLine : MonoBehaviour
     // https://unionassets.com/blog/algorithm-brezenhema-and-wu-s-line-299
     static void DrawBresenhamLine(Texture2D tex, int x1, int y1, int x2, int y2, Color c)
     {
-        // 令 x1 < x2 && y1 < y2
+        // 令 x1 < x2 && 0 < abs(dy) < dx
         bool isSteep = Mathf.Abs(y2 - y1) > Mathf.Abs(x2 - x1);
         if (isSteep)
         {
@@ -165,7 +165,6 @@ public class DrawLine : MonoBehaviour
             MyUtility.Swap(ref y1, ref y2);
         }
 
-        // 0 < abs(dy) < dx
         int dy = System.Math.Abs(y2 - y1);
         int dx = x2 - x1;
 
