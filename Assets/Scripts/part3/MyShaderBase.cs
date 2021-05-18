@@ -35,8 +35,8 @@ public class ShaderParameters
     {
         var projectionMatrix = MyUtility.GetProjectMatrix(camera.fieldOfView, camera.aspect, camera.nearClipPlane, camera.farClipPlane);
         var viewMatrix       = MyUtility.GetViewMatrix(camera);
-        var modelMatrix      = MyUtility.GetModelMatrix(objTransform);
-        unity_ObjectToWorld  = modelMatrix;                           // M
+        //var modelMatrix      = MyUtility.GetModelMatrix(objTransform);
+        unity_ObjectToWorld  = objTransform.localToWorldMatrix;       // M
         UNITY_MATRIX_V       = viewMatrix;                            // V
         UNITY_MATRIX_P       = projectionMatrix;                      // P
         unity_WorldToObject  = objTransform.worldToLocalMatrix;

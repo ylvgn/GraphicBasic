@@ -243,10 +243,11 @@ public static class MyUtility
         Mscale[10] = s.z;
         Mscale[15] = 1;
 
-        var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
-        var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
+        // has some bug, why?
         var Mrz = GetRotateMatrix(transform.forward, q.eulerAngles.z);
-        var Mrotation = Mrz * Mry * Mrx; // order: 以world space zyx 等价于 locals pace xyz
+        var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
+        var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
+        var Mrotation = Mrz * Mry * Mrx;
 
         var Mtranslate = Matrix4x4.identity;
         Mtranslate.SetColumn(3, new Vector4(p.x, p.y, p.z, 1));
@@ -284,6 +285,43 @@ public static class MyUtility
         m[9] = c1 * yz - sx;
         m[10] = c1 * zz + c;
         m[15] = 1;
+        return m;
+    }
+
+    // http://www.songho.ca/opengl/gl_anglestoaxes.html
+    public static Matrix4x4 RotateXMatrix(float angle)
+    {
+        Matrix4x4 m = Matrix4x4.identity;
+        float c = Mathf.Cos(angle * Mathf.Deg2Rad);
+        float s = Mathf.Sin(angle * Mathf.Deg2Rad);
+        m[5] = c;
+        m[6] = s;
+        m[9] = -s;
+        m[10] = c;
+        return m;
+    }
+
+    public static Matrix4x4 RotateYMatrix(float angle)
+    {
+        Matrix4x4 m = Matrix4x4.identity;
+        float c = Mathf.Cos(angle * Mathf.Deg2Rad);
+        float s = Mathf.Sin(angle * Mathf.Deg2Rad);
+        m[0] = c;
+        m[2] = s;
+        m[8] = -s;
+        m[10] = c;
+        return m;
+    }
+
+    public static Matrix4x4 RotateZMatrix(float angle)
+    {
+        Matrix4x4 m = Matrix4x4.identity;
+        float c = Mathf.Cos(angle * Mathf.Deg2Rad);
+        float s = Mathf.Sin(angle * Mathf.Deg2Rad);
+        m[0] = c;
+        m[1] = s;
+        m[4] = -s;
+        m[5] = c;
         return m;
     }
 }
