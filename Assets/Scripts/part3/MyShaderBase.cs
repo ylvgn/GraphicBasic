@@ -65,6 +65,32 @@ public class ShaderSemantic
     public Vector4 COLOR;
     public Vector4 SV_POSITION; // pixel shader
     //public Vector4 BINORMAL;  // unity shaderlab does not support 'BINORMAL' or 'BITANGENT' semantic
+
+    public static void Swap(ref ShaderSemantic a, ref ShaderSemantic b)
+    {
+        var tmp = a;
+        a = b;
+        b = tmp;
+    }
+
+    public ShaderSemantic () { }
+    public ShaderSemantic(ShaderSemantic v)
+    {
+        POSITION = v.POSITION;
+        TEXCOORD0 = v.TEXCOORD0;
+        TEXCOORD1 = v.TEXCOORD1;
+        TEXCOORD2 = v.TEXCOORD2;
+        TEXCOORD3 = v.TEXCOORD3;
+        TEXCOORD4 = v.TEXCOORD4;
+        TEXCOORD5 = v.TEXCOORD5;
+        TEXCOORD6 = v.TEXCOORD6;
+        TEXCOORD7 = v.TEXCOORD7;
+        TEXCOORD8 = v.TEXCOORD8;
+        NORMAL = v.NORMAL;
+        TANGENT = v.TANGENT;
+        COLOR = v.COLOR;
+        SV_POSITION = v.SV_POSITION;
+    }
 };
 
 public abstract class MyShaderBase : MonoBehaviour

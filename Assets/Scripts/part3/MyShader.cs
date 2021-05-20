@@ -52,7 +52,7 @@ public class MyShader : MyShaderBase
             var v = appdata as appdata;
             o.pos = shaderParams.UNITY_MATRIX_MVP * v.pos;
             o.uv = v.uv;
-            o.color = new Vector4(1, 0, 0, 1);
+            o.color = new Vector4(1, 0, 0, 1); // tmp
             return o;
         };
 
@@ -60,6 +60,7 @@ public class MyShader : MyShaderBase
         frag = (v2f, shaderParams) =>
         {
             var o = v2f as v2f;
+            return Color.red; // tmp
             var uv = o.uv;
             if (_MainTex)
                 return _MainTex.GetPixel((int)(uv.x * _MainTex.width), (int)(uv.y * _MainTex.height));
