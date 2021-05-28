@@ -35,8 +35,8 @@ public class ShaderParameters
     {
         var projectionMatrix = MyUtility.GetProjectMatrix(camera.fieldOfView, camera.aspect, camera.nearClipPlane, camera.farClipPlane);
         var viewMatrix       = MyUtility.GetViewMatrix(camera);
-        //var modelMatrix      = MyUtility.GetModelMatrix(objTransform);
-        unity_ObjectToWorld  = objTransform.localToWorldMatrix;       // M
+        var modelMatrix      = MyUtility.GetModelMatrix(objTransform);
+        unity_ObjectToWorld  = modelMatrix;                           // M
         UNITY_MATRIX_V       = viewMatrix;                            // V
         UNITY_MATRIX_P       = projectionMatrix;                      // P
         unity_WorldToObject  = objTransform.worldToLocalMatrix;
@@ -64,7 +64,6 @@ public class ShaderSemantic
     public Vector4 TANGENT;
     public Vector4 COLOR;
     public Vector4 SV_POSITION; // pixel shader
-    //public Vector4 BINORMAL;  // unity shaderlab does not support 'BINORMAL' or 'BITANGENT' semantic
 
     public static void Swap(ref ShaderSemantic a, ref ShaderSemantic b)
     {
@@ -73,8 +72,8 @@ public class ShaderSemantic
         b = tmp;
     }
 
-    public ShaderSemantic () { }
-    public ShaderSemantic(ShaderSemantic v)
+    public ShaderSemantic() { }
+    public void SetData(ShaderSemantic v)
     {
         POSITION = v.POSITION;
         TEXCOORD0 = v.TEXCOORD0;
@@ -97,5 +96,5 @@ public abstract class MyShaderBase : MonoBehaviour
 {
     public abstract GPUPipeline.VertexShader VertexShader { get; }
     public abstract GPUPipeline.PixelShader PixelShader { get; }
-    public abstract System.Type GetCastType { get; }
+    public abstract System.Type CastType { get; }
 }

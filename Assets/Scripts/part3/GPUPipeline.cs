@@ -20,11 +20,9 @@ public class GPUPipeline : MonoBehaviour
     public ShadingMode shadingMode = ShadingMode.Shaded;
 
     // debug
+    public bool IsDebuging;
     public Color bgColor;
     public Color textColor;
-    Vector3 mouseLeft;
-    Vector3 mouseRight;
-    Vector3 mouseMiddle;
 
     void Start()
     {
@@ -48,126 +46,147 @@ public class GPUPipeline : MonoBehaviour
 
         Run();
         tex.Apply(false);
-
-        // debug
-        MoveCamera();
     }
 
     void Run()
     {
-        for (int i = 0; i < inputObj.Count; i++)
+        for (int i = 0; i < 1; i++)
         {
             var obj = inputObj[i];
             var meshFilter = obj.GetComponent<MeshFilter>();
             var mesh = meshFilter.sharedMesh;
-            var vertices = mesh.vertices;
-            var triangles = mesh.triangles;
+            Draw(obj, mesh);
+        }
+    }
 
-            if (shadingMode == ShadingMode.Wireframe)
+    void Draw(MyShaderBase obj, Mesh mesh)
+    {
+        var vertices = mesh.vertices;
+        var triangles = mesh.triangles;
+
+        float screenWidth = MyCamera.pixelWidth;
+        float screenHeight = MyCamera.pixelHeight;
+        var far = MyCamera.farClipPlane;
+        var near = MyCamera.nearClipPlane;
+        float w = screenWidth / 2;
+        float h = screenHeight / 2;
+        var shaderParams = new ShaderParameters(obj.transform, MyCamera);
+
+        ShaderSemantic[] v2fs = new ShaderSemantic[vertices.Length];
+
+        // gen data
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var appdata = (ShaderSemantic)System.Activator.CreateInstance(obj.CastType);
+            var p = vertices[i];
+            appdata.POSITION = new Vector4(p.x, p.y, p.z, 1);
+            appdata.NORMAL = mesh.normals[i];
+            appdata.TANGENT = mesh.tangents[i];
+            appdata.TEXCOORD0 = mesh.uv[i];
+            appdata.COLOR = Color.blue;
+            v2fs[i] = appdata;
+        }
+
+        // vertex shader
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var appdata = v2fs[i];
+            // vertex shader: local space -> world space -> view space -> clip space
+            ShaderSemantic v2f = obj.VertexShader(appdata, shaderParams);
+            var p = v2f.SV_POSITION;
+
+            // homogeneous divide: clip space -> NDC[-1, 1]
+            p = new Vector4(p.x / p.w, p.y / p.w, p.z / p.w, 1);
+
+            // NDC -> screen space (window space) https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics?redirectedfrom=MSDN#direct3d-9-vpos-and-direct3d-10-sv_position
+            v2f.SV_POSITION = new Vector3(p.x * w + w, p.y * h + h, (far - near) * p.z / 2 + (far + near) / 2);
+            v2fs[i] = v2f;
+        }
+
+        if (shadingMode == ShadingMode.Wireframe)
+            Wireframe(obj, mesh, v2fs); // Wireframe
+        else
+            Shaded(obj, mesh, v2fs); // Shaded
+    }
+
+    void Wireframe(MyShaderBase obj, Mesh mesh, ShaderSemantic[] v2fs)
+    {
+        var triangles = mesh.triangles;
+        int last_x = 0, last_y = 0;
+        for (int i = 0; i < triangles.Length; i++)
+        {
+            var v2f = v2fs[triangles[i]];
+            var p = v2f.SV_POSITION;
+            int x = (int)p.x;
+            int y = (int)p.y;
+            if (i > 0 && i % 3 != 0)
             {
-                int last_x = 0, last_y = 0;
-                var M = MyUtility.GetModelMatrix(obj.transform);
-                for (int j = 0; j < triangles.Length; j++)
-                {
-                    var index = triangles[j];
-                    var world_pos = obj.transform.localToWorldMatrix.MultiplyPoint(vertices[index]);
-                    Vector3 screenPos = MyCamera.WorldToScreenPoint(world_pos);
-                    int x = (int)screenPos.x;
-                    int y = (int)screenPos.y;
-                    if (j > 0 && j % 3 != 0)
-                    {
-                        DrawLineClamp(last_x, last_y, x, y, Color.white);
-                    }
-                    last_x = x;
-                    last_y = y;
-                }
-                continue;
+                DrawLineClamp(last_x, last_y, x, y, Color.white);
+            }
+            last_x = x;
+            last_y = y;
+        }
+    }
+
+    void Shaded(MyShaderBase obj, Mesh mesh, ShaderSemantic[] v2fs)
+    {
+        var triangles = mesh.triangles;
+        for (int j = 0; j < triangles.Length; j += 3)
+        {
+            ShaderSemantic p1 = v2fs[triangles[j]];
+            ShaderSemantic p2 = v2fs[triangles[j + 1]];
+            ShaderSemantic p3 = v2fs[triangles[j + 2]];
+
+            // 令 y1 ≥ y2 ≥ y3
+            if (p2.SV_POSITION.y <= p3.SV_POSITION.y)
+            {
+                ShaderSemantic.Swap(ref p2, ref p3);
+            }
+            if (p1.SV_POSITION.y <= p2.SV_POSITION.y)
+            {
+                ShaderSemantic.Swap(ref p2, ref p1);
+            }
+            if (p2.SV_POSITION.y < p3.SV_POSITION.y)
+            {
+                ShaderSemantic.Swap(ref p2, ref p3);
+            }
+            // 令 y2 == y3 && x2 < x3
+            if (p2.SV_POSITION.y == p3.SV_POSITION.y && p2.SV_POSITION.x > p3.SV_POSITION.x)
+            {
+                ShaderSemantic.Swap(ref p2, ref p3);
+            }
+            // 令 y1 == y2 && x2 < x1
+            if (p2.SV_POSITION.y == p1.SV_POSITION.y && p2.SV_POSITION.x > p1.SV_POSITION.x)
+            {
+                ShaderSemantic.Swap(ref p2, ref p1);
             }
 
-            var shaderParams = new ShaderParameters(obj.transform, MyCamera);
-            ShaderSemantic[] v2fs = new ShaderSemantic[vertices.Length];
-            float screenWidth = MyCamera.pixelWidth;
-            float screenHeight = MyCamera.pixelHeight;
-            var far = MyCamera.farClipPlane;
-            var near = MyCamera.nearClipPlane;
-            float w = screenWidth / 2;
-            float h = screenHeight / 2;
-            for (int j = 0; j < vertices.Length; j++)
+            float x1 = p1.SV_POSITION.x, y1 = p1.SV_POSITION.y;
+            float x2 = p2.SV_POSITION.x, y2 = p2.SV_POSITION.y;
+            float x3 = p3.SV_POSITION.x, y3 = p3.SV_POSITION.y;
+
+            float M_x = (y2 - y1) / ((y1 - y3) / (x1 - x3)) + x1; // 直线AC y - y1 = m * (x - x1), m = (y1-y3)/(x1-x3)
+            var M = (ShaderSemantic)System.Activator.CreateInstance(p1.GetType());
+            M.SetData(p2);
+            M.SV_POSITION = new Vector4(M_x, y2, p2.SV_POSITION.z, 1);
+
+            var ABCDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, p3.SV_POSITION - p1.SV_POSITION);
+            var ABMDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, M.SV_POSITION - p1.SV_POSITION);
+            var Left = p2.SV_POSITION.x < M.SV_POSITION.x ? p2 : M;
+            var Right = p2.SV_POSITION.x < M.SV_POSITION.x ? M : p2;
+            if (ABCDir.z * ABMDir.z > 0) // ABC-ABM(SAME DIR) ABC-CBM(REVERSE DIR)
             {
-                var appdata = (ShaderSemantic)System.Activator.CreateInstance(obj.GetCastType);
-                appdata.POSITION = new Vector4(vertices[j].x, vertices[j].y, vertices[j].z, 1);
-                appdata.NORMAL = mesh.normals[j];
-                appdata.TANGENT = mesh.tangents[j];
-                appdata.TEXCOORD0 = mesh.uv[j];
-
-                // vertex shader: local space -> world space -> view space -> clip space
-                ShaderSemantic v2f = obj.VertexShader(appdata, shaderParams);
-                var p = v2f.SV_POSITION;
-
-                // homogeneous divide: clip space -> NDC[-1, 1]
-                p = new Vector4(p.x / p.w, p.y / p.w, p.z / p.w, 1);
-
-                // NDC -> screen space (window space) https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics?redirectedfrom=MSDN#direct3d-9-vpos-and-direct3d-10-sv_position
-                v2f.SV_POSITION = new Vector3(p.x * w + w, p.y * h + h, (far - near) * p.z / 2 + (far + near) / 2);
-                v2fs[j] = v2f;
+                DrawTriangleClamp(p1, Left, Right, -1, obj);
+                DrawTriangleClamp(p3, Left, Right, +1, obj);
+            }
+            else
+            {
+                DrawTriangleClamp(p1, Left, Right, +1, obj);
+                DrawTriangleClamp(p3, Left, Right, +1, obj);
             }
 
-            for (int j = 0; j < triangles.Length; j += 3)
-            {
-                ShaderSemantic p1 = v2fs[triangles[j]];
-                ShaderSemantic p2 = v2fs[triangles[j + 1]];
-                ShaderSemantic p3 = v2fs[triangles[j + 2]];
-
-                // 令 y1 ≥ y2 ≥ y3
-                if (p2.SV_POSITION.y <= p3.SV_POSITION.y)
-                {
-                    ShaderSemantic.Swap(ref p2, ref p3);
-                }
-                if (p1.SV_POSITION.y <= p2.SV_POSITION.y)
-                {
-                    ShaderSemantic.Swap(ref p2, ref p1);
-                }
-                if (p2.SV_POSITION.y < p3.SV_POSITION.y)
-                {
-                    ShaderSemantic.Swap(ref p2, ref p3);
-                }
-                // 令 y2 == y3 && x2 < x3
-                if (p2.SV_POSITION.y == p3.SV_POSITION.y && p2.SV_POSITION.x > p3.SV_POSITION.x)
-                {
-                    ShaderSemantic.Swap(ref p2, ref p3);
-                }
-                // 令 y1 == y2 && x2 < x1
-                if (p2.SV_POSITION.y == p1.SV_POSITION.y && p2.SV_POSITION.x > p1.SV_POSITION.x)
-                {
-                    ShaderSemantic.Swap(ref p2, ref p1);
-                }
-
-                float x1 = p1.SV_POSITION.x, y1 = p1.SV_POSITION.y;
-                float x2 = p2.SV_POSITION.x, y2 = p2.SV_POSITION.y;
-                float x3 = p3.SV_POSITION.x, y3 = p3.SV_POSITION.y;
-
-                float M_x = (y2 - y1) / ((y1 - y3) / (x1 - x3)) + x1; // 直线AC y - y1 = m * (x - x1), m = (y1-y3)/(x1-x3)
-                ShaderSemantic M = new ShaderSemantic(p2);
-                M.SV_POSITION = new Vector4(M_x, y2, p2.SV_POSITION.z, 1);
-
-                var ABCDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, p3.SV_POSITION - p1.SV_POSITION);
-                var ABMDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, M.SV_POSITION - p1.SV_POSITION);
-                var Left = p2.SV_POSITION.x < M.SV_POSITION.x ? p2 : M;
-                var Right = p2.SV_POSITION.x < M.SV_POSITION.x ? M : p2;
-                if (ABCDir.z * ABMDir.z > 0) // ABC-ABM(SAME DIR) ABC-CBM(REVERSE DIR)
-                {
-                    DrawTriangleClamp(p1, Left, Right, -1, obj);
-                    DrawTriangleClamp(p3, Left, Right, +1, obj);
-                }
-                else
-                {
-                    DrawTriangleClamp(p1, Left, Right, +1, obj);
-                    DrawTriangleClamp(p3, Left, Right, +1, obj);
-                }
-
-                // 最后画BM, tmp
-                DrawLineClamp((int)p2.SV_POSITION.x, (int)p2.SV_POSITION.y, (int)M.SV_POSITION.x, (int)M.SV_POSITION.y, Color.red);
-            }
+            // 最后画BM, tmp
+            DrawLineClamp((int)p2.SV_POSITION.x, (int)p2.SV_POSITION.y, (int)M.SV_POSITION.x, (int)M.SV_POSITION.y, M.COLOR);
         }
     }
 
@@ -223,7 +242,8 @@ public class GPUPipeline : MonoBehaviour
             int xr = (int)((y - y1) / m2 + x1);
             for (int x = xl; x <= xr; x++)
             {
-                var v2f = new ShaderSemantic(p1);
+                var v2f = (ShaderSemantic)System.Activator.CreateInstance(p1.GetType());
+                v2f.SetData(p1);
                 v2f.SV_POSITION = new Vector4(x, y, 1, 1); // tmp
                 Color c = obj.PixelShader(v2f, null);
                 tex.SetPixel(x, y, c);
@@ -232,50 +252,12 @@ public class GPUPipeline : MonoBehaviour
         }
     }
 
-    void MoveCamera()
-    {
-        // offset
-        if (Input.GetMouseButtonDown(2))
-            mouseMiddle = MyCamera.transform.position;
-        if (Input.GetMouseButton(2))
-        {
-            float x = Input.GetAxis("Mouse X");
-            float y = Input.GetAxis("Mouse Y");
-            mouseMiddle.x += x;
-            mouseMiddle.y += y;
-            MyCamera.transform.position = Vector3.Lerp(MyCamera.transform.position, mouseMiddle, Time.deltaTime * 10);
-        }
-
-        // Rotate
-        if (Input.GetMouseButtonDown(1))
-            mouseRight = MyCamera.transform.eulerAngles;
-        if (Input.GetMouseButton(1))
-        {
-            float x = Input.GetAxis("Mouse X");
-            float y = Input.GetAxis("Mouse Y");
-            mouseRight.y += x;
-            mouseRight.x += -y;
-            MyCamera.transform.rotation = Quaternion.Lerp(MyCamera.transform.rotation, Quaternion.Euler(mouseRight), Time.deltaTime * 20);
-        }
-
-        // FOV
-        if (Input.GetMouseButtonDown(0))
-            mouseLeft = Input.mousePosition;
-
-        if (Input.GetMouseButton(0))
-        {
-            var dir = Input.mousePosition - mouseLeft;
-            var speed = Mathf.Clamp(dir.y, -10, 10);
-            var fov = MyCamera.fieldOfView + speed;
-            MyCamera.fieldOfView = Mathf.Lerp(MyCamera.fieldOfView, fov, Time.deltaTime);
-            mouseLeft = Input.mousePosition;
-        }
-    }
-
     void OnGUI()
     {
         // output
         GUI.DrawTexture(new Rect(0, 0, tex.width, tex.height), tex);
+
+        if (!IsDebuging) return;
 
         // debug
         MyUtility.LogPoint(new Rect(0, 0, 100, 20), $"Obj Count:{inputObj.Count}", textColor, 20);
@@ -298,12 +280,14 @@ public class GPUPipeline : MonoBehaviour
         str = $"==== my_view matrix ====\n{myViewMatrix}";
         MyUtility.LogPoint(new Rect(0, MyCamera.pixelHeight + posY, 200, 150), str, textColor, 20);
         posY -= offset;
+
+        /* debug model matrix
         var obj = inputObj[0];
         str = $"==== unity_local2World matrix ====\n{obj.transform.localToWorldMatrix}";
         MyUtility.LogPoint(new Rect(0, MyCamera.pixelHeight + posY, 200, 150), str, textColor, 20);
         posY -= offset;
-        var tt = MyUtility.GetModelMatrix(obj.transform);
-        str = $"==== my_local2World matrix ====\n{tt}";
+        str = $"==== my_local2World matrix ====\n{MyUtility.GetModelMatrix(obj.transform)}";
         MyUtility.LogPoint(new Rect(0, MyCamera.pixelHeight + posY, 200, 150), str, textColor, 20);
+        */
     }
 }

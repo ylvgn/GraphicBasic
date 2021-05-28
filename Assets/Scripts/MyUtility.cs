@@ -193,9 +193,9 @@ public static class MyUtility
         */
 
         /*
-        Mtranslate    =    [ 0  0  0 -ex]
-                           [ 0  0  0 -ey]
-                           [ 0  0  0 -ez]
+        Mtranslate    =    [ 1  0  0 -ex]
+                           [ 0  1  0 -ey]
+                           [ 0  0  1 -ez]
                            [ 0  0  0  1 ]
         */
 
@@ -234,7 +234,23 @@ public static class MyUtility
                        [ 0  0  1  pz ]
                        [ 0  0  0  1  ]
 
-        Mrotation  =
+        Mrotation  = q is Quaternion, q.eulerAnlges is kind of guess what rx should be in Euler, so it's inaccurate (floating point problem)
+
+        var rx = RotateXMatrix(q.eulerAngles.x);
+        var ry = RotateYMatrix(q.eulerAngles.y);
+        var rz = RotateZMatrix(q.eulerAngles.z);
+        var Mrotation1 = rz * ry * rx;   // Unity order -> zyx
+
+        var Mrz = GetRotateMatrix(transform.forward, q.eulerAngles.z);
+        var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
+        var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
+        var Mrotation2 = Mrz * Mry * Mrx;
+
+        compare to Unity Rotate matrix -> 'Mrotation1' and 'Mrotation2' and 'Mrotation3'
+        var ex  = Matrix4x4.Rotate(Quaternion.Euler(q.eulerAngles.x, 0, 0));
+        var ey  = Matrix4x4.Rotate(Quaternion.Euler(0, q.eulerAngles.y, 0));
+        var ez  = Matrix4x4.Rotate(Quaternion.Euler(0, 0, q.eulerAngles.z));
+        var Mrotation3 = ez * ey * ex;
         */
 
         var Mscale = Matrix4x4.identity;
@@ -242,17 +258,35 @@ public static class MyUtility
         Mscale[5] = s.y;
         Mscale[10] = s.z;
         Mscale[15] = 1;
-
-        // has some bug, why?
-        var Mrz = GetRotateMatrix(transform.forward, q.eulerAngles.z);
-        var Mry = GetRotateMatrix(transform.up, q.eulerAngles.y);
-        var Mrx = GetRotateMatrix(transform.right, q.eulerAngles.x); // Mrx: 绕transform.right -> (localspace x axis) 旋转角度 q.eulerAngles.x -> (x degrees around the x axis)
-        var Mrotation = Mrz * Mry * Mrx;
-
+        var Mrotation = GetRotateMatrix(q);
         var Mtranslate = Matrix4x4.identity;
         Mtranslate.SetColumn(3, new Vector4(p.x, p.y, p.z, 1));
-
         return Mtranslate * Mrotation * Mscale; // equals to return Matrix4x4.TRS(p, q, s);
+    }
+
+    // Quaternion-derived rotation matrix: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation#Quaternion-derived_rotation_matrix
+    // Equals to Matrix4x4.Rotate(Quaternion q)
+    public static Matrix4x4 GetRotateMatrix(Quaternion q)
+    {
+        float x2 = q.x * q.x;
+        float y2 = q.y * q.y;
+        float z2 = q.z * q.z;
+        float xy = q.x * q.y;
+        float xz = q.x * q.z;
+        float yz = q.y * q.z;
+        float wx = q.w * q.x;
+        float wy = q.w * q.y;
+        float wz = q.w * q.z;
+
+        // This calculation would be a lot more complicated for non-unit length quaternions
+        // Note: The constructor of Matrix4x4 expects the Matrix in column-major format like expected by
+        // OpenGL
+        return new Matrix4x4(
+            new Vector4(1 - 2 * (y2 + z2), 2 * (xy + wz),     2 * (xz - wy),     0),  // Column0
+            new Vector4(2 * (xy - wz),     1 - 2 * (x2 + z2), 2 * (yz + wx),     0),  // Column1
+            new Vector4(2 * (xz + wy),     2 * (yz - wx),     1 - 2 * (x2 + y2), 0),  // Column2
+            new Vector4(0,                 0,                 0,                 1)   // Column3
+        );
     }
 
     // Rodrigues's formula: http://www.songho.ca/opengl/gl_rotate.html
@@ -307,8 +341,8 @@ public static class MyUtility
         float c = Mathf.Cos(angle * Mathf.Deg2Rad);
         float s = Mathf.Sin(angle * Mathf.Deg2Rad);
         m[0] = c;
-        m[2] = s;
-        m[8] = -s;
+        m[2] = -s; //  m[2] = -s, m[8] = s. something wired in Unity coordinate.
+        m[8] = s;
         m[10] = c;
         return m;
     }
