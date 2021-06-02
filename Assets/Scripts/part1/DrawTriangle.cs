@@ -84,20 +84,10 @@ public class DrawTriangle : MonoBehaviour
         // 直线AC y - y1 = m * (x - x1), m = (y1-y3)/(x1-x3)
         float M_x = (y2 - y1) / ((y1 - y3) / (x1 - x3)) + x1;
         MyVector3 M = new MyVector3(M_x, y2);
-        var ABCDir = MyVector3.Cross(B - A, C - A);
-        var ABMDir = MyVector3.Cross(B - A, M - A);
-
         var Left = B.x < M.x ? B : M;
         var Right = B.x < M.x ? M : B;
-        if (ABCDir.z * ABMDir.z > 0) // ABC-ABM(SAME DIR) ABC-CBM(REVERSE DIR)
-        {
-            DrawTriangleInner(tex, A, Left, Right, -1);
-            DrawTriangleInner(tex, C, Left, Right, +1);
-        } else
-        {
-            DrawTriangleInner(tex, A, Left, Right, +1);
-            DrawTriangleInner(tex, C, Left, Right, +1);
-        }
+        DrawTriangleInner(tex, A, Left, Right, -1);
+        DrawTriangleInner(tex, C, Left, Right, +1);
 
         // 最后画BM
         DrawLine.Draw(tex, (int)B.x, (int)B.y, (int)M.x, (int)M.y, triangleColor, DrawLine.LineType.Line);
