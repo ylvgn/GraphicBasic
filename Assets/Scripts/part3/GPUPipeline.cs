@@ -6,22 +6,20 @@ public class GPUPipeline : MonoBehaviour
 {
     public delegate ShaderSemantic VertexShader(ShaderSemantic appdata, ShaderParameters shaderParams);
     public delegate Vector4 PixelShader(ShaderSemantic v2f, ShaderParameters shaderParams);
-
-    public Camera MyCamera;
-    Texture2D tex;
-    List<MyShaderBase> inputObj;
-
     public enum ShadingMode
     {
         Shaded,
         Wireframe,
     }
 
-    public ShadingMode shadingMode = ShadingMode.Shaded;
+    public Camera MyCamera;
+    public Texture2D tex;
+    public ShadingMode shadingMode;
+    public RenderBuffer renderBuffer;
+    public List<MyShaderBase> inputObj;
 
     // debug
     public bool IsDebuging;
-    public Color bgColor;
     public Color textColor;
 
     void Start()
@@ -35,17 +33,13 @@ public class GPUPipeline : MonoBehaviour
         if (!tex || tex.width != Screen.width || tex.height != Screen.height)
         {
             MyUtility.MyDestroy(ref tex);
-            tex = new Texture2D(Screen.width, Screen.height,TextureFormat.ARGB32, true, true);
+            tex = new Texture2D(Screen.width, Screen.height, TextureFormat.ARGB32, true, true);
+            renderBuffer = new RenderBuffer(tex);
             tex.name = "MyTexture";
         }
 
-        // clean
-        for (int i = 0; i < tex.height; i++)
-            for (int j = 0; j < tex.width; j++)
-                tex.SetPixel(j, i, bgColor);
-
+        Clean();
         Run();
-        tex.Apply(false);
     }
 
     void Run()
@@ -55,15 +49,24 @@ public class GPUPipeline : MonoBehaviour
             var obj = inputObj[i];
             var meshFilter = obj.GetComponent<MeshFilter>();
             var mesh = meshFilter.sharedMesh;
-            Draw(obj, mesh);
+            DrawCall(obj, mesh);
         }
+
+        for (int i = 0; i < tex.height; i++) // column
+        {
+            for (int j = 0; j < tex.width; j++) // row
+            {
+                Color c = renderBuffer.colorBuffer[j, i];
+                tex.SetPixel(j, i, c);
+            }
+        }
+        tex.Apply(false);
     }
 
-    void Draw(MyShaderBase obj, Mesh mesh)
+    void DrawCall(MyShaderBase obj, Mesh mesh)
     {
         var vertices = mesh.vertices;
         var triangles = mesh.triangles;
-
         float screenWidth = MyCamera.pixelWidth;
         float screenHeight = MyCamera.pixelHeight;
         var far = MyCamera.farClipPlane;
@@ -72,9 +75,7 @@ public class GPUPipeline : MonoBehaviour
         float h = screenHeight / 2;
         var shaderParams = new ShaderParameters(obj.transform, MyCamera);
 
-        ShaderSemantic[] v2fs = new ShaderSemantic[vertices.Length];
-
-        // gen data
+        ShaderSemantic[] appFullData = new ShaderSemantic[vertices.Length];
         for (int i = 0; i < vertices.Length; i++)
         {
             var appdata = (ShaderSemantic)System.Activator.CreateInstance(obj.CastType);
@@ -83,115 +84,157 @@ public class GPUPipeline : MonoBehaviour
             appdata.NORMAL = mesh.normals[i];
             appdata.TANGENT = mesh.tangents[i];
             appdata.TEXCOORD0 = mesh.uv[i];
-            appdata.COLOR = Color.blue;
-            v2fs[i] = appdata;
+            appFullData[i] = appdata;
         }
 
         // vertex shader
         for (int i = 0; i < vertices.Length; i++)
         {
-            var appdata = v2fs[i];
+            var appdata = appFullData[i];
             // vertex shader: local space -> world space -> view space -> clip space
             ShaderSemantic v2f = obj.VertexShader(appdata, shaderParams);
             var p = v2f.SV_POSITION;
 
             // homogeneous divide: clip space -> NDC[-1, 1]
             p = new Vector4(p.x / p.w, p.y / p.w, p.z / p.w, 1);
+            v2f.POSITION = p;
 
             // NDC -> screen space (window space) https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics?redirectedfrom=MSDN#direct3d-9-vpos-and-direct3d-10-sv_position
             v2f.SV_POSITION = new Vector3(p.x * w + w, p.y * h + h, (far - near) * p.z / 2 + (far + near) / 2);
-            v2fs[i] = v2f;
+            appFullData[i] = v2f;
         }
 
+        // pixel shader
         if (shadingMode == ShadingMode.Wireframe)
-            Wireframe(obj, mesh, v2fs); // Wireframe
+            Wireframe(obj, shaderParams, mesh, appFullData); // Wireframe
         else
-            Shaded(obj, mesh, v2fs); // Shaded
+            Shaded(obj, shaderParams, mesh, appFullData);    // Shaded
     }
 
-    void Wireframe(MyShaderBase obj, Mesh mesh, ShaderSemantic[] v2fs)
+    void Wireframe(MyShaderBase obj, ShaderParameters shaderParams, Mesh mesh, ShaderSemantic[] appFullData)
     {
         var triangles = mesh.triangles;
-        int last_x = 0, last_y = 0;
+        ShaderSemantic last = null;
         for (int i = 0; i < triangles.Length; i++)
         {
-            var v2f = v2fs[triangles[i]];
-            var p = v2f.SV_POSITION;
-            int x = (int)p.x;
-            int y = (int)p.y;
+            var v2f = appFullData[triangles[i]];
+            v2f.COLOR = Color.white;
             if (i > 0 && i % 3 != 0)
-            {
-                DrawLineClamp(last_x, last_y, x, y, Color.white);
-            }
-            last_x = x;
-            last_y = y;
+                DrawLine(obj, shaderParams, last, v2f);
+            last = v2f;
         }
     }
 
-    void Shaded(MyShaderBase obj, Mesh mesh, ShaderSemantic[] v2fs)
+    void Shaded(MyShaderBase obj, ShaderParameters shaderParams, Mesh mesh, ShaderSemantic[] appFullData)
     {
         var triangles = mesh.triangles;
-        for (int j = 0; j < triangles.Length; j += 3)
+        for (int i = 0; i < triangles.Length; i += 3)
         {
-            ShaderSemantic p1 = v2fs[triangles[j]];
-            ShaderSemantic p2 = v2fs[triangles[j + 1]];
-            ShaderSemantic p3 = v2fs[triangles[j + 2]];
+            ShaderSemantic p1 = appFullData[triangles[i]];
+            ShaderSemantic p2 = appFullData[triangles[i + 1]];
+            ShaderSemantic p3 = appFullData[triangles[i + 2]];
 
-            // 令 y1 ≥ y2 ≥ y3
-            if (p2.SV_POSITION.y <= p3.SV_POSITION.y)
-            {
-                ShaderSemantic.Swap(ref p2, ref p3);
-            }
-            if (p1.SV_POSITION.y <= p2.SV_POSITION.y)
-            {
-                ShaderSemantic.Swap(ref p2, ref p1);
-            }
-            if (p2.SV_POSITION.y < p3.SV_POSITION.y)
-            {
-                ShaderSemantic.Swap(ref p2, ref p3);
-            }
-            // 令 y2 == y3 && x2 < x3
-            if (p2.SV_POSITION.y == p3.SV_POSITION.y && p2.SV_POSITION.x > p3.SV_POSITION.x)
-            {
-                ShaderSemantic.Swap(ref p2, ref p3);
-            }
-            // 令 y1 == y2 && x2 < x1
-            if (p2.SV_POSITION.y == p1.SV_POSITION.y && p2.SV_POSITION.x > p1.SV_POSITION.x)
-            {
-                ShaderSemantic.Swap(ref p2, ref p1);
-            }
+            //outline debug
+            //DrawLine(obj, shaderParams, p1, p2);
+            //DrawLine(obj, shaderParams, p2, p3);
+            //DrawLine(obj, shaderParams, p3, p1);
 
-            float x1 = p1.SV_POSITION.x, y1 = p1.SV_POSITION.y;
-            float x2 = p2.SV_POSITION.x, y2 = p2.SV_POSITION.y;
-            float x3 = p3.SV_POSITION.x, y3 = p3.SV_POSITION.y;
+            // debug color
+            p1.COLOR = Color.red;
+            p2.COLOR = Color.green;
+            p3.COLOR = Color.blue;
 
-            float M_x = (y2 - y1) / ((y1 - y3) / (x1 - x3)) + x1; // 直线AC y - y1 = m * (x - x1), m = (y1-y3)/(x1-x3)
-            var M = (ShaderSemantic)System.Activator.CreateInstance(p1.GetType());
-            M.SetData(p2);
-            M.SV_POSITION = new Vector4(M_x, y2, p2.SV_POSITION.z, 1);
-
-            var ABCDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, p3.SV_POSITION - p1.SV_POSITION);
-            var ABMDir = Vector3.Cross(p2.SV_POSITION - p1.SV_POSITION, M.SV_POSITION - p1.SV_POSITION);
-            var Left = p2.SV_POSITION.x < M.SV_POSITION.x ? p2 : M;
-            var Right = p2.SV_POSITION.x < M.SV_POSITION.x ? M : p2;
-            if (ABCDir.z * ABMDir.z > 0) // ABC-ABM(SAME DIR) ABC-CBM(REVERSE DIR)
-            {
-                DrawTriangleClamp(p1, Left, Right, -1, obj);
-                DrawTriangleClamp(p3, Left, Right, +1, obj);
-            }
-            else
-            {
-                DrawTriangleClamp(p1, Left, Right, +1, obj);
-                DrawTriangleClamp(p3, Left, Right, +1, obj);
-            }
-
-            // 最后画BM, tmp
-            DrawLineClamp((int)p2.SV_POSITION.x, (int)p2.SV_POSITION.y, (int)M.SV_POSITION.x, (int)M.SV_POSITION.y, M.COLOR);
+            DrawTriangle(obj, shaderParams, p1, p2, p3);
+            //break; // debug
         }
     }
 
-    void DrawLineClamp(int x1, int y1, int x2, int y2, Color c)
+    void DrawTriangle(MyShaderBase obj, ShaderParameters shaderParams, ShaderSemantic p1, ShaderSemantic p2, ShaderSemantic p3)
     {
+        // 令 y1 ≥ y2 ≥ y3
+        if (p2.SV_POSITION.y <= p3.SV_POSITION.y)
+        {
+            MyUtility.Swap(ref p2, ref p3);
+        }
+        if (p1.SV_POSITION.y <= p2.SV_POSITION.y)
+        {
+            MyUtility.Swap(ref p2, ref p1);
+        }
+        if (p2.SV_POSITION.y < p3.SV_POSITION.y)
+        {
+            MyUtility.Swap(ref p2, ref p3);
+        }
+
+        float y1 = p1.SV_POSITION.y; // A.y
+        float y3 = p3.SV_POSITION.y; // C.y
+
+        /*  将三角形在B点水平x轴切开上下两部分分开画：
+         *  BM为水平直线, M在AC线上
+         *  直线AC: y - y1 = m * (x - x1), 其中m = (y1-y3) / (x1-x3)
+         *  将xy互换: x - x1 = m * (y - y1), 其中m = (x1-x3) / (y1-y3)
+         *  已知: B.y == M.y(M_y), 求M.x 即(M_x)
+         *      得: x = m * (y - y1) + x1
+         */
+        float M_y = p2.SV_POSITION.y;
+        ShaderSemantic M = ShaderSemantic.CreateInstance(p1.GetType());
+        float w = (M_y - y1) / (y3 - y1);
+        M.Lerp(p1, p3, Mathf.Abs(w));
+
+        // B和M的顺序 由x坐标确定
+        ShaderSemantic Left = p2.SV_POSITION.x < M.SV_POSITION.x ? p2 : M;
+        ShaderSemantic Right = p2.SV_POSITION.x < M.SV_POSITION.x ? M : p2;
+        DrawTriangleInner(obj, shaderParams, p1, Left, Right, -1); // draw 🔺ABM
+        DrawTriangleInner(obj, shaderParams, p3, Left, Right, +1); // draw 🔺CBM
+        DrawLine(obj, shaderParams, Left, Right);                  // draw line BM
+
+        // debug
+        /*
+        DrawPoint((int)p1.SV_POSITION.x, (int)p1.SV_POSITION.y, p1.COLOR);
+        DrawPoint((int)p3.SV_POSITION.x, (int)p3.SV_POSITION.y, p3.COLOR);
+        DrawPoint((int)M.SV_POSITION.x, (int)M.SV_POSITION.y, M.COLOR);
+        DrawPoint((int)p2.SV_POSITION.x, (int)p2.SV_POSITION.y, p2.COLOR);
+        */
+    }
+
+    // 在p1处开始画, p2p3是水平线, yStep为-1表示往下
+    void DrawTriangleInner(MyShaderBase obj, ShaderParameters shaderParams, ShaderSemantic p1, ShaderSemantic p2, ShaderSemantic p3, int yStep)
+    {
+        float x1 = p1.SV_POSITION.x;
+        int y1 = (int)p1.SV_POSITION.y;
+        float x2 = p2.SV_POSITION.x;
+        int y2 = (int)p2.SV_POSITION.y;
+        float x3 = p3.SV_POSITION.x;
+        float y3 = p3.SV_POSITION.y;
+
+        float m1 = (y1 - y2) / (x1 - x2); // 直线p1p2: y - y1 = m1*(x - x1), m1 = (y1-y2)/(x1-x2)
+        float m2 = (y1 - y3) / (x1 - x3); // 直线p1p3: y - y1 = m2*(x - x1), m2 = (y1-y3)/(x1-x3)
+
+        var type = p1.GetType();
+        for (int y = y1; y != y2;)
+        {
+            // scan line
+            float xl = (y - y1) / m1 + x1;
+            float leftWeight = (xl - x1) / (x2 - x1);
+            ShaderSemantic left = ShaderSemantic.CreateInstance(type);
+            left.Lerp(p1, p2, leftWeight);
+
+            float xr = (y - y1) / m2 + x1;
+            float rightWeight = (xr - x1) / (x3 - x1);
+            ShaderSemantic right = ShaderSemantic.CreateInstance(type);
+            right.Lerp(p1, p3, Mathf.Abs(rightWeight));
+
+            DrawLine(obj, shaderParams, left, right);
+            y += yStep;
+        }
+    }
+
+    void DrawLine(MyShaderBase obj, ShaderParameters shaderParams, ShaderSemantic p1, ShaderSemantic p2)
+    {
+        int x1 = (int)p1.SV_POSITION.x;
+        int y1 = (int)p1.SV_POSITION.y;
+        int x2 = (int)p2.SV_POSITION.x;
+        int y2 = (int)p2.SV_POSITION.y;
+
         // 令x1 < x2 && 0 < abs(dy) < dx
         bool isSteep = Mathf.Abs(y2 - y1) > Mathf.Abs(x2 - x1);
         if (isSteep)
@@ -204,20 +247,24 @@ public class GPUPipeline : MonoBehaviour
             MyUtility.Swap(ref x1, ref x2);
             MyUtility.Swap(ref y1, ref y2);
         }
+
         int dy = System.Math.Abs(y2 - y1);
         int dx = x2 - x1;
         if (dy == 0 && dx == 0) return;
         int slope_err = dy - dx;
         int ystep = (y1 < y2) ? 1 : -1;
+        var type = p1.GetType();
         for (int x = x1, y = y1; x <= x2; x++)
         {
-            if (isSteep) {
-                if (y > 0 && y < tex.width && x > 0 && x < tex.height)
-                    tex.SetPixel(y, x, c);
-            }
-            else {
-                if (x >= 0 && x < tex.width && y >= 0 && y < tex.height)
-                    tex.SetPixel(x, y, c);
+            int _x = isSteep ? y : x;
+            int _y = isSteep ? x : y;
+            if (_x > 0 && _x < tex.width && _y > 0 && _y < tex.height)
+            {
+                ShaderSemantic v2f = ShaderSemantic.CreateInstance(type);
+                float w = ((float)x - x1) / (x1 - x2);
+                v2f.Lerp(p1, p2, Mathf.Abs(w));
+                var color = obj.PixelShader(v2f, shaderParams);
+                renderBuffer.Update(obj, _x, _y, v2f, color);
             }
             slope_err += dy;
             if (slope_err >= 0)
@@ -228,28 +275,9 @@ public class GPUPipeline : MonoBehaviour
         }
     }
 
-    void DrawTriangleClamp(ShaderSemantic p1, ShaderSemantic p2, ShaderSemantic p3, int yStep, MyShaderBase obj)
+    void Clean()
     {
-        int x1 = (int)p1.SV_POSITION.x, y1 = (int)p1.SV_POSITION.y;
-        int x2 = (int)p2.SV_POSITION.x, y2 = (int)p2.SV_POSITION.y;
-        int x3 = (int)p3.SV_POSITION.x, y3 = (int)p3.SV_POSITION.y;
-        if (y2 == y1 && y1 == y3) return;
-        float m1 = (y1 - y2) * 1.0f / (x1 - x2); // 直线START-BOTTOM_LEFT: y - y1 = m1*(x - x1), m1 = (y1-y2)/(x1-x2)
-        float m2 = (y1 - y3) * 1.0f / (x1 - x3); // 直线START-BOTTOM_RIGHT: y - y1 = m2*(x - x1), m2 = (y1-y3)/(x1-x3)
-        for (int y = y1; y != y2;)
-        {
-            int xl = (int)((y - y1) / m1 + x1);
-            int xr = (int)((y - y1) / m2 + x1);
-            for (int x = xl; x <= xr; x++)
-            {
-                var v2f = (ShaderSemantic)System.Activator.CreateInstance(p1.GetType());
-                v2f.SetData(p1);
-                v2f.SV_POSITION = new Vector4(x, y, 1, 1); // tmp
-                Color c = obj.PixelShader(v2f, null);
-                tex.SetPixel(x, y, c);
-            }
-            y += yStep;
-        }
+        renderBuffer.Clean();
     }
 
     void OnGUI()
@@ -289,5 +317,18 @@ public class GPUPipeline : MonoBehaviour
         str = $"==== my_local2World matrix ====\n{MyUtility.GetModelMatrix(obj.transform)}";
         MyUtility.LogPoint(new Rect(0, MyCamera.pixelHeight + posY, 200, 150), str, textColor, 20);
         */
+    }
+
+    void DrawPoint(int x, int y, Color c)
+    {
+        int[] dx = { -1, 0, 1, 0, 0, -1, 1, -1, 1 };
+        int[] dy = { 0, 1, 0, -1, 0, -1, -1, 1, 1 };
+        for (int i = 0; i < dx.Length; i++)
+        {
+            int a = x + dx[i];
+            int b = y + dy[i];
+            if (a < 0 || a >= tex.width || b < 0 || b >= tex.height) continue;
+            tex.SetPixel(a, b, c);
+        }
     }
 }

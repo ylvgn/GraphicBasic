@@ -60,4 +60,11 @@ public class MyShader : MyShaderBase
     };
 
     public override Type CastType => typeof(appdata);
+
+    public override void Awake()
+    {
+        base.Awake();
+        Commands.ZWrite = ZWrite.On;
+        Commands.Cull = Cull.Off; // tmp
+    }
 }

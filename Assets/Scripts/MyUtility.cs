@@ -13,16 +13,9 @@ public static class MyUtility
         return res;
     }
 
-    public static void Swap(ref float a, ref float b)
+    public static void Swap<T>(ref T a, ref T b)
     {
-        float tmp = a;
-        a = b;
-        b = tmp;
-    }
-
-    public static void Swap(ref int a, ref int b)
-    {
-        int tmp = a;
+        T tmp = a;
         a = b;
         b = tmp;
     }
@@ -49,7 +42,7 @@ public static class MyUtility
         tex.SetPixel(x, y - 1, c);
     }
 
-    // world-space
+    // world-space(scene view)
     public static void LogPoint(Vector3 pos, string text, Color c, int fontSize = 30)
     {
         var oldColor = GUI.color;
@@ -67,7 +60,7 @@ public static class MyUtility
         GUI.skin.label.fontSize = oldFontSize;
     }
 
-    // screen-space
+    // screen-space(scene view)
     public static void LogPoint(Rect printRect, string text, Color c, int fontSize = 40)
     {
         var oldColor = GUI.color;
@@ -136,7 +129,8 @@ public static class MyUtility
         return p + Vector3.Dot(o - p, nl) * nl;
     }
 
-    public static void MyDestroy(ref Texture2D o)
+    public static void MyDestroy<T>(ref T o)
+        where T : Object
     {
         if (o == null) return;
         GameObject.Destroy(o);

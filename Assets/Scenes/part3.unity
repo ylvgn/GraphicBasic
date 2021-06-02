@@ -486,13 +486,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1002606612}
-  m_LocalRotation: {x: -0.21017231, y: -0.15220457, z: 0.03314339, w: 0.9651751}
+  m_LocalRotation: {x: -0, y: -0.9929038, z: 0.118920125, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 3}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: -23.304, y: -19.577002, z: 8.009001}
+  m_LocalEulerAnglesHint: {x: 13.660001, y: -180.00002, z: 0}
 --- !u!114 &1002606617
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -539,9 +539,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MyCamera: {fileID: 1927443383}
+  tex: {fileID: 0}
   shadingMode: 0
+  inputObj: []
   IsDebuging: 0
-  bgColor: {r: 0, g: 0, b: 0, a: 1}
   textColor: {r: 1, g: 1, b: 1, a: 0.5019608}
 --- !u!114 &1927443381
 MonoBehaviour:
@@ -663,7 +664,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &2071868336
 BoxCollider:
   m_ObjectHideFlags: 0
